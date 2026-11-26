@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Report - EduSphere</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: linear-gradient(135deg, #f8faff 0%, #f1eaff 100%); min-height: 100vh; display: flex; overflow-x: hidden; color: #1e293b; }
+        .sidebar { width: 260px; min-height: 100vh; padding: 30px 20px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; z-index: 10; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; padding-left: 10px; color:#1e1b4b; cursor: pointer; }
+        .nav-menu { display: flex; flex-direction: column; gap: 5px; flex-grow: 1; }
+        .nav-item { padding: 12px 15px; border-radius: 12px; text-decoration: none; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 15px; transition: all 0.3s; cursor: pointer;}
+        .nav-item:hover, .nav-item.active { background: #fff; color: #4318FF; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .user-profile { margin-top: auto; padding: 15px; background: rgba(255,255,255,0.8); border-radius: 15px; display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 40px; height: 40px; background: #fed7aa; border-radius: 50%; font-size:24px; text-align:center; line-height:40px;}
+        
+        .main-content { flex-grow: 1; padding: 40px; display: flex; flex-direction: column; gap: 20px; }
+        .report-header { margin-bottom: 10px; }
+        .report-header h1 { font-size: 2rem; color: #1e1b4b; font-weight: 700; }
+        .report-header p { color: #64748b; font-size: 0.95rem; }
+
+        .top-row { display: flex; gap: 20px; align-items: stretch; }
+        .card { background: #ffffff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+        
+        .profile-card { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .accuracy-circle { width: 140px; height: 140px; border-radius: 50%; border: 10px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 700; color: #1e1b4b; margin: 25px 0 15px 0; transition: border-color 0.5s; }
+        
+        .chart-card { flex-grow: 1; display: flex; flex-direction: column; }
+        .chart-container { flex-grow: 1; position: relative; min-height: 300px; display: flex; justify-content: center; align-items: center; }
+        
+        .side-stats { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 15px; }
+        .tag-pill { background: #ffffff; padding: 12px 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); font-weight: 600; color: #1e1b4b; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+        .stat-mini-card { background: #ffffff; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 15px; }
+        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; }
+        
+        .intervention-card { display: flex; justify-content: space-between; align-items: center; padding: 25px 35px; background: #ffffff; border: 1px solid #fffbeb; }
+        .review-btn { background: #f59e0b; color: white; border: none; padding: 12px 30px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 15px rgba(245, 158, 11, 0.2); }
+        .review-btn:hover { background: #d97706; transform: translateY(-2px); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 100; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 400px; border-radius: 25px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); max-height: 80vh; overflow-y: auto;}
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-btn { font-size: 1.5rem; cursor: pointer; color: #64748b; }
+        .lang-option { padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500;}
+        .lang-option:hover { border-color: #4318FF; }
+        .lang-option.active { background: #f0faff; border-color: #4318FF; color: #4318FF; }
+        
+        .review-item { margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 15px; background: #f8fafc; }
+        .review-q { font-weight: 600; color: #1e293b; margin-bottom: 10px; font-size: 0.95rem; }
+        .review-ans { font-size: 0.9rem; color: #64748b; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo" onclick="window.location.href='index.html'">🛡️ EduSphere</div>
+        <div class="nav-menu">
+            <a onclick="showWIP('Profile')" class="nav-item">👤 <span id="nav-prof">My Profile</span></a>
+            <a href="student.html" class="nav-item">📝 <span id="nav-prac">Custom Practice</span></a>
+            <a href="#" class="nav-item active">📊 <span id="nav-res">Reports</span></a>
+            <a onclick="openSettings()" class="nav-item">⚙️ <span id="nav-set">Settings</span></a>
+        </div>
+        <div class="user-profile">
+            <div class="avatar">🧑‍💻</div>
+            <div><div style="font-weight:600; font-size:0.85rem;">Ali bin Ahmad</div><div style="font-size:0.75rem; color:#64748b;">Standard 6</div></div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="report-header">
+            <h1 id="rep-title">Diagnostic Report</h1>
+            <p id="rep-sub">Comprehensive overview of your academic performance</p>
+        </div>
+        
+        <div class="top-row">
+            <div class="card profile-card">
+                <img src="https://api.dicebear.com/7.x/micah/svg?seed=Ali" alt="Avatar" style="width:80px; margin-bottom:15px;">
+                <h3 style="font-size: 1.1rem; color: #1e1b4b;">Ali bin Ahmad</h3>
+                <span id="display-standard" style="background:#e0e7ff; color:#4318FF; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:600; margin-top:5px;">Standard 6</span>
+                
+                <div class="accuracy-circle" id="accuracy-circle-ui">
+                    <span id="dynamic-accuracy">0%</span>
+                    <span style="font-size: 0.9rem; color: #64748b; font-weight: 500;" id="rep-acc">Accuracy</span>
+                </div>
+                <p style="font-size:0.8rem; color:#94a3b8;" id="rep-based">Based on latest Quiz</p>
+            </div>
+
+            <div class="card chart-card">
+                <!-- 🌟 这里改成了通用的 rep-chart-title 🌟 -->
+                <h3 id="rep-chart-title" style="color: #1e1b4b; font-size: 1.1rem;">Skill Analysis</h3>
+                <div class="chart-container">
+                    <canvas id="kpsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="side-stats">
+                <div class="tag-pill">
+                    <span style="color: #3b82f6; font-size: 1.2rem;" id="subject-icon">📘</span> <span id="display-subject">Science</span>
+                </div>
+                
+                <div class="stat-mini-card">
+                    <div class="stat-icon" style="background: #f0fdf4; color: #22c55e;">📈</div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #64748b;">Strongest Chapter</div>
+                        <div style="font-weight: 600; color: #1e1b4b; font-size: 0.95rem;" id="dynamic-strongest">N/A</div>
+                    </div>
+                </div>
+
+                <div class="stat-mini-card">
+                    <div class="stat-icon" style="background: #fef2f2; color: #ef4444;">📉</div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #64748b;">Mistakes Made</div>
+                        <div style="font-weight: 600; color: #1e1b4b; font-size: 0.95rem;" id="dynamic-mistakes">0 Mistakes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card intervention-card">
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div style="font-size: 2rem; background: #fef3c7; width: 55px; height: 55px; border-radius: 50%; display: flex; justify-content: center; align-items: center;">💡</div>
+                <div>
+                    <h3 id="rep-interv" style="color: #1e1b4b; font-size: 1.1rem;">Targeted Intervention</h3>
+                    <p id="rep-interv-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 3px;">Review your mistakes to understand your weak points.</p>
+                </div>
+            </div>
+            <button class="review-btn" id="rep-btn-rev" onclick="openReviewModal()">Review Mistakes</button>
+        </div>
+    </div>
+
+    <!-- 语言弹窗 -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Settings</h2>
+                <span class="close-btn" onclick="closeSettings()">✕</span>
+            </div>
+            <p style="font-size:0.9rem; color:#64748b; margin-bottom: 15px;" id="modal-desc">Select Language / Pilih Bahasa</p>
+            <div class="lang-option active" id="lang-en" onclick="setLanguage('en')">🇬🇧 English (Default)</div>
+            <div class="lang-option" id="lang-ms" onclick="setLanguage('ms')">🇲🇾 Bahasa Melayu</div>
+        </div>
+    </div>
+
+    <!-- 错题本弹窗 -->
+    <div class="modal-overlay" id="review-modal">
+        <div class="modal-content" style="width: 500px;">
+            <div class="modal-header">
+                <h2 style="color:#1e1b4b;">Review Mistakes</h2>
+                <span class="close-btn" onclick="closeReviewModal()">✕</span>
+            </div>
+            <div id="review-list"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/settings.js"></script>
+    <script src="../js/report.js"></script>
+</body>
+</html>

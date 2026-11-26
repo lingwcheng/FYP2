@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Assessment - EduSphere</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/assessment.css">
+</head>
+<body>
+    <div id="cheat-warning" style="display: none; position: fixed; top: 30px; right: 30px; background: rgba(239, 68, 68, 0.95); color: white; padding: 15px 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); z-index: 1000; align-items: center; gap: 15px; backdrop-filter: blur(10px); font-family: 'Poppins', sans-serif;">
+        <div style="font-size: 1.8rem;">⚠️</div>
+        <div>
+            <div style="font-weight: 700; font-size: 1rem;">Warning!</div>
+            <div style="font-size: 0.85rem;">Tab switching / Leaving page detected.</div>
+        </div>
+        <div style="margin-left: 15px; cursor: pointer; font-weight: bold; font-size: 1.2rem;" onclick="document.getElementById('cheat-warning').style.display='none'">✕</div>
+    </div>
+
+    <h1 style="color: #4318FF; text-align: center; margin-top: 20px;">EduSphere Live Assessment 🚀</h1>
+    
+    <div class="quiz-container">
+        <div class="header-info" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span id="student-name" style="font-weight: 600; color: #1e1b4b;">Student: Loading...</span>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span id="q-counter" style="color: #64748b; font-weight: 500;">Question 1 of X</span>
+                <span id="timer-display" style="background: #fee2e2; color: #ef4444; padding: 6px 15px; border-radius: 20px; font-weight: 700; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(239,68,68,0.2);">⏱️ 15:00</span>
+            </div>
+        </div>
+        
+        <div class="question-box" id="question-box">
+            <h2 class="q-title" id="q-text">Loading question...</h2>
+            <div class="options-grid" id="options-grid"></div>
+        </div>
+
+        <button class="submit-btn" onclick="window.nextQuestion()" id="btn-next">Next Question ➔</button>
+    </div>
+
+    <script src="../js/db.js"></script>
+    <script src="../js/ai-engine.js"></script>
+    <script src="../js/assessment.js"></script>
+</body>
+</html>

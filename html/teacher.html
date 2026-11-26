@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - EduSphere</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: linear-gradient(135deg, #fdf4ff 0%, #f3e8ff 100%); min-height: 100vh; display: flex; overflow-x: hidden; color: #1e293b; }
+
+        /* 侧边栏 */
+        .sidebar { width: 265px; min-height: 100vh; padding: 28px 18px; background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 32px; padding-left: 10px; color: #1e1b4b; cursor: pointer; }
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+        .nav-item { padding: 12px 14px; border-radius: 12px; color: #64748b; font-weight: 500; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; cursor: pointer; border: none; background: transparent; width: 100%; font-size: 0.9rem; text-align: left; }
+        .nav-item:hover, .nav-item.active { background: #fff; color: #9333ea; box-shadow: 0 5px 15px rgba(147, 51, 234, 0.08); font-weight: 600; }
+        .badge { background: #ef4444; color: white; font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; font-weight: 700; }
+
+        .user-profile { margin-top: auto; padding: 14px; background: rgba(255,255,255,0.88); border-radius: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .avatar { width: 40px; height: 40px; background: #fbcfe8; border-radius: 50%; font-size: 22px; text-align: center; line-height: 40px; flex-shrink: 0; }
+        .logout-btn { width: 100%; padding: 10px; border: 1px solid #fecdd3; background: #fff1f2; color: #e11d48; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .logout-btn:hover { background: #ffe4e6; }
+
+        /* 主内容区 */
+        .main-content { flex-grow: 1; padding: 32px 38px; display: flex; flex-direction: column; gap: 20px; height: 100vh; overflow-y: auto; }
+        .header h1 { font-size: 1.9rem; color: #1e1b4b; font-weight: 700; }
+        .header p { color: #64748b; font-size: 0.92rem; margin-top: 4px; }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        .grid-bank { display: grid; grid-template-columns: 1.45fr 1fr; gap: 24px; align-items: start; }
+        .grid-ai { display: grid; grid-template-columns: 0.95fr 1.45fr; gap: 24px; align-items: start; }
+        .card { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(20px); border: 1px solid white; border-radius: 22px; padding: 26px; box-shadow: 0 15px 35px rgba(0,0,0,0.04); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+        .card-title { font-size: 1.18rem; font-weight: 700; color: #1e1b4b; }
+
+        /* 表单元素 */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-weight: 600; color: #1e1b4b; margin-bottom: 6px; font-size: 0.88rem; }
+        .form-control { width: 100%; padding: 10px 13px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.9rem; outline: none; background: #f8fafc; transition: border-color 0.2s; }
+        .form-control:focus { border-color: #9333ea; background: white; }
+        textarea.form-control { resize: vertical; min-height: 78px; }
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* 多选标签 Chips */
+        .tag-selector { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; max-height: 185px; overflow-y: auto; }
+        .tag-chip { padding: 5px 11px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; background: white; border: 1px solid #cbd5e1; color: #475569; cursor: pointer; transition: all 0.18s; user-select: none; }
+        .tag-chip:hover { border-color: #9333ea; color: #9333ea; }
+        .tag-chip.selected { background: #9333ea; color: white; border-color: #9333ea; font-weight: 600; }
+
+        /* 按钮体系 */
+        .submit-btn { background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); color: white; border: none; padding: 13px 16px; width: 100%; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 8px 20px rgba(147, 51, 234, 0.26); }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(147, 51, 234, 0.35); }
+        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .btn-green { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); box-shadow: 0 8px 20px rgba(22, 163, 74, 0.25); }
+        .btn-outline { background: white; color: #7e22ce; border: 1px solid #d8b4fe; padding: 8px 13px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-outline:hover { background: #faf5ff; }
+        .btn-sm { padding: 5px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; border: none; }
+        .btn-add-q { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+        .btn-add-q.in-cart { background: #16a34a; color: white; border-color: #16a34a; }
+        .btn-edit { background: #e0f2fe; color: #0369a1; }
+        .btn-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+        /* 筛选栏与列表 */
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .bank-list { display: flex; flex-direction: column; gap: 14px; max-height: 620px; overflow-y: auto; padding-right: 6px; }
+        .q-item { background: white; padding: 18px; border-radius: 15px; border-left: 4px solid #9333ea; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .q-item.pending-card { border-left: 4px solid #f59e0b; }
+        .q-item.selected-card { background: #faf5ff; border: 1px solid #d8b4fe; border-left: 4px solid #16a34a; }
+
+        .q-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .q-tag { font-size: 0.71rem; padding: 3px 9px; border-radius: 99px; font-weight: 600; background: #f1f5f9; color: #475569; }
+        .tag-sub { background: #e0e7ff; color: #4338ca; }
+        .tag-std { background: #fef08a; color: #854d0e; }
+        .tag-diff { background: #fae8ff; color: #86198f; }
+        .tag-ai { background: #dcfce7; color: #166534; }
+        .tag-custom { background: #cffafe; color: #0e7490; }
+
+        .q-text { font-weight: 600; color: #1e1b4b; margin-bottom: 9px; font-size: 0.93rem; line-height: 1.5; }
+        .q-options { list-style: none; margin-bottom: 8px; font-size: 0.83rem; color: #475569; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .q-options li.correct-opt { color: #15803d; font-weight: 600; background: #f0fdf4; padding: 3px 8px; border-radius: 6px; }
+        .q-explanation { font-size: 0.8rem; color: #64748b; background: #f8fafc; padding: 7px 10px; border-radius: 8px; }
+
+        /* 双 AI 审核框与编辑区 */
+        .ai-report-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 13px; margin: 10px 0; font-size: 0.82rem; color: #92400e; }
+        .edit-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; margin-top: 12px; display: none; }
+        .edit-box.open { display: block; }
+
+        /* 右侧试卷篮与已发布 PIN 列表 */
+        .cart-list { display: flex; flex-direction: column; gap: 8px; max-height: 230px; overflow-y: auto; margin-bottom: 14px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #f8fafc; padding: 9px 12px; border-radius: 10px; font-size: 0.82rem; border: 1px solid #e2e8f0; }
+        .pin-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #f5f3ff; border: 1px solid #ddd6fe; padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; }
+        .pin-code-pill { font-family: monospace; font-size: 1.05rem; font-weight: 700; color: #6d28d9; background: white; padding: 4px 10px; border-radius: 8px; border: 1px dashed #a78bfa; letter-spacing: 2px; }
+
+        .empty-bank { text-align: center; color: #94a3b8; padding: 32px 16px; font-style: italic; font-size: 0.88rem; }
+
+        /* 发布成功 PIN 弹窗 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: white; padding: 34px; border-radius: 24px; max-width: 440px; width: 90%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.2); }
+        .big-pin { font-family: monospace; font-size: 2.5rem; font-weight: 800; letter-spacing: 8px; color: #7e22ce; background: #faf5ff; border: 2px dashed #c084fc; border-radius: 16px; padding: 16px; margin: 18px 0; }
+    </style>
+</head>
+<body>
+    <!-- ==================== 左侧导航栏 ==================== -->
+    <div class="sidebar">
+        <div class="logo" onclick="window.location.href='index.html'">🛡️ EduSphere</div>
+        <div class="nav-menu">
+            <button class="nav-item active" data-view="view-bank">
+                <span>📚 Question Bank & Build Test</span>
+            </button>
+            <button class="nav-item" data-view="view-ai-gen">
+                <span>🤖 Dual-AI Test Generator</span>
+                <span class="badge" id="pending-badge" style="display:none;">0</span>
+            </button>
+            <button class="nav-item" data-view="view-custom">
+                <span>➕ Custom Question</span>
+            </button>
+            <button class="nav-item" onclick="alert('Next Phase: Student Radar Analytics will read directly from Firestore results!')">
+                <span>📊 Class Analytics</span>
+            </button>
+        </div>
+
+        <div class="user-profile">
+            <div class="avatar">👩‍🏫</div>
+            <div>
+                <div id="teacher-name" style="font-weight:600; font-size:0.88rem;">Loading...</div>
+                <div style="font-size:0.75rem; color:#64748b;">Standard 6 STEM</div>
+            </div>
+        </div>
+        <button id="logout-btn" class="logout-btn">🚪 Sign Out</button>
+    </div>
+
+    <!-- ==================== 主内容区 ==================== -->
+    <div class="main-content">
+
+        <!-- 视图 1：从题库选题出卷 + 生成 PIN -->
+        <div id="view-bank" class="view-section active">
+            <div class="header" style="margin-bottom: 20px;">
+                <h1>Question Bank & Assessment Builder</h1>
+                <p>Filter KSSR Standard 6 questions by tags, pick questions from the cloud bank, and generate a PIN for students.</p>
+            </div>
+
+            <div class="grid-bank">
+                <!-- 左侧：云端题库浏览与选题 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="card-title">☁️ Cloud Question Bank</span>
+                            <span style="background:#f3e8ff; color:#9333ea; padding:4px 11px; border-radius:20px; font-size:0.78rem; font-weight:600;" id="bank-count">0 Qs</span>
+                        </div>
+                        <button type="button" id="seed-sample-btn" class="btn-outline">⚡ Load 8 Sample KSSR Qs</button>
+                    </div>
+
+                    <div class="filter-grid">
+                        <select id="filter-subject" class="form-control">
+                            <option value="ALL">All Subjects</option>
+                            <option value="Mathematics">Mathematics</option>
+                            <option value="Science">Science</option>
+                        </select>
+                        <select id="filter-tag" class="form-control">
+                            <option value="ALL">All KSSR Tags</option>
+                        </select>
+                        <select id="filter-source" class="form-control">
+                            <option value="ALL">All Sources</option>
+                            <option value="System Bank">System Bank</option>
+                            <option value="Teacher Custom">Teacher Custom</option>
+                            <option value="Dual-AI">Dual-AI Verified</option>
+                        </select>
+                    </div>
+                    <input type="text" id="filter-search" class="form-control" style="margin-bottom: 14px;" placeholder="🔍 Search keywords in questions...">
+
+                    <div class="bank-list" id="bank-list">
+                        <div class="empty-bank">Loading cloud question bank...</div>
+                    </div>
+                </div>
+
+                <!-- 右侧：当前组卷篮 + 已发布测验 PIN 列表 -->
+                <div style="display:flex; flex-direction:column; gap:20px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📝 Selected Test Paper</span>
+                            <span style="background:#dcfce7; color:#15803d; padding:4px 11px; border-radius:20px; font-size:0.78rem; font-weight:700;" id="cart-count">0 Selected</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Assessment Title</label>
+                            <input type="text" id="test-title-input" class="form-control" placeholder="e.g. Standard 6 Math Fractions & Money Quiz">
+                        </div>
+
+                        <div class="cart-list" id="cart-list">
+                            <div class="empty-bank" style="padding:18px;">Click "+ Add to Test" on questions from the left bank.</div>
+                        </div>
+
+                        <button type="button" id="generate-bank-test-btn" class="submit-btn btn-green">
+                            🚀 Generate Test & Get Student PIN
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">🔑 Published Tests & PINs</span>
+                        </div>
+                        <div id="published-tests-list" style="max-height: 240px; overflow-y: auto;">
+                            <div class="empty-bank" style="padding:18px;">No tests published yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视图 2：双 AI 多标签出题 + 审核/编辑 + 直接发 PIN -->
+        <div id="view-ai-gen" class="view-section">
+            <div class="header" style="margin-bottom: 20px;">
+                <h1>🤖 Dual-AI Test Generator & Teacher Review</h1>
+                <p><strong>Human-in-the-Loop:</strong> Gemini drafts → ChatGPT cross-verifies → Teacher selects, edits, and generates a live Test PIN.</p>
+            </div>
+
+            <div class="grid-ai">
+                <!-- 左侧：生成参数（支持多选标签 + 自定义题数） -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">⚙️ Configure AI Generation</span>
+                    </div>
+                    <form id="ai-gen-form">
+                        <div class="row-2">
+                            <div class="form-group">
+                                <label class="form-label">Subject</label>
+                                <select id="ai-subject" class="form-control">
+                                    <option value="Mathematics">Mathematics</option>
+                                    <option value="Science">Science</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Grade Level</label>
+                                <select id="ai-grade" class="form-control">
+                                    <option value="Standard 6" selected>Standard 6 (KSSR)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Select Target Tags (Multi-Select Enabled)</label>
+                            <div id="ai-tag-chips" class="tag-selector"></div>
+                        </div>
+
+                        <div class="row-2">
+                            <div class="form-group">
+                                <label class="form-label">Number of Questions</label>
+                                <input type="number" id="ai-count" class="form-control" min="1" max="20" value="3" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Difficulty</label>
+                                <select id="ai-difficulty" class="form-control">
+                                    <option value="Mixed" selected>Mixed (Easy to KBAT)</option>
+                                    <option value="Easy">Easy</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Hard">Hard</option>
+                                    <option value="KBAT">KBAT</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="ai-report-box" style="background:#f5f3ff; border-color:#ddd6fe; color:#5b21b6;">
+                            <strong>Dual-AI Pipeline:</strong><br>
+                            1. <strong>Gemini</strong> generates KSSR questions for your chosen tags.<br>
+                            2. <strong>ChatGPT</strong> verifies calculations & syllabus fit.<br>
+                            3. You can <strong>keep, remove, or edit</strong> any question before generating the Test PIN.
+                        </div>
+
+                        <button type="submit" id="ai-gen-btn" class="submit-btn">✨ Generate & Cross-Verify</button>
+                    </form>
+                </div>
+
+                <!-- 右侧：审核、编辑、勾选并一键生成 Test PIN -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🧐 Review, Edit & Publish AI Questions</span>
+                        <span style="background:#fef3c7; color:#b45309; padding:4px 11px; border-radius:20px; font-size:0.78rem; font-weight:700;" id="pending-count">0 Pending</span>
+                    </div>
+
+                    <div class="bank-list" id="review-list" style="max-height: 440px; margin-bottom: 16px;">
+                        <div class="empty-bank">Configure tags & quantity on the left, then click Generate.</div>
+                    </div>
+
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Test Title (for checked questions: <span id="ai-selected-count">0</span>)</label>
+                            <input type="text" id="ai-test-title" class="form-control" placeholder="e.g. AI Diagnostic Test - Standard 6 Science">
+                        </div>
+                        <div class="row-2">
+                            <button type="button" id="approve-and-publish-btn" class="submit-btn btn-green">
+                                🎯 Approve Selected & Generate PIN
+                            </button>
+                            <button type="button" id="approve-only-btn" class="btn-outline" style="width:100%; font-size:0.9rem;">
+                                💾 Only Save Selected to Bank
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视图 3：老师自创题目（自动加 Teacher Custom 标签） -->
+        <div id="view-custom" class="view-section">
+            <div class="header" style="margin-bottom: 20px;">
+                <h1>➕ Create Teacher Custom Question</h1>
+                <p>Write your own question. It will be saved into the Cloud Question Bank and automatically tagged as <strong>Teacher Custom</strong>.</p>
+            </div>
+
+            <div class="card" style="max-width: 780px;">
+                <form id="create-q-form">
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label class="form-label">Subject</label>
+                            <select id="q-subject" class="form-control" required>
+                                <option value="Mathematics">Mathematics</option>
+                                <option value="Science">Science</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Difficulty / Type Tag</label>
+                            <select id="q-difficulty" class="form-control" required>
+                                <option value="Easy">Easy</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Hard">Hard</option>
+                                <option value="KBAT">KBAT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Select KSSR Standard 6 Topic Tags (Click to toggle)</label>
+                        <div id="manual-tag-chips" class="tag-selector"></div>
+                        <input type="text" id="q-custom-tag" class="form-control" style="margin-top: 8px;" placeholder="Optional extra tag (e.g. Word Problem, Past Year)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Question Text</label>
+                        <textarea id="q-text" class="form-control" placeholder="Type your custom question here..." required></textarea>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label class="form-label">Option A</label>
+                            <input type="text" id="opt-A" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Option B</label>
+                            <input type="text" id="opt-B" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Option C</label>
+                            <input type="text" id="opt-C" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Option D</label>
+                            <input type="text" id="opt-D" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label class="form-label">Correct Answer</label>
+                            <select id="q-correct" class="form-control" required>
+                                <option value="0">Option A</option>
+                                <option value="1">Option B</option>
+                                <option value="2">Option C</option>
+                                <option value="3">Option D</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Auto-Applied Source Tag</label>
+                            <input type="text" class="form-control" value="👩‍🏫 Teacher Custom + Standard 6" disabled>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Explanation (Shown to students after submission)</label>
+                        <input type="text" id="q-explanation" class="form-control" placeholder="Explain how to get the correct answer..." required>
+                    </div>
+
+                    <button type="submit" id="save-q-btn" class="submit-btn">💾 Save Custom Question to Cloud Bank</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 生成 Test PIN 成功弹窗 ==================== -->
+    <div id="pin-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div style="font-size: 2.5rem; margin-bottom: 6px;">🎉</div>
+            <h2 style="color: #1e1b4b; font-size: 1.4rem;">Test Published Successfully!</h2>
+            <p id="modal-test-title" style="color: #64748b; font-size: 0.9rem; margin-top: 4px;"></p>
+            <div class="big-pin" id="modal-pin-code">000000</div>
+            <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 18px;">Share this 6-digit PIN with your Standard 6 students to start the diagnostic assessment.</p>
+            <div class="row-2">
+                <button type="button" id="copy-pin-btn" class="submit-btn">📋 Copy PIN</button>
+                <button type="button" id="close-pin-modal-btn" class="btn-outline" style="width:100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/teacher.js"></script>
+</body>
+</html>

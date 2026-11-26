@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Assessment Reports</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/assessment-report.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="report-container">
+        <h1 class="title">Diagnostic Report</h1>
+        <p class="subtitle" id="role-subtitle">Comprehensive overview of academic performance</p>
+        
+        <div id="results-list"></div>
+
+        <a href="#" id="btn-back" class="btn-home">Back to Dashboard</a>
+    </div>
+
+    <!-- ====== 🌟 新增：针对性复习弹窗 (默认隐藏，绝对不影响排版) ====== -->
+    <style>
+        .revision-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
+            display: none; /* 默认隐藏 */
+            justify-content: center; align-items: center; z-index: 9999;
+        }
+        .revision-glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px; border-radius: 12px; width: 90%; max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
+        }
+    </style>
+
+    <div id="revision-modal" class="revision-modal-overlay">
+        <div class="revision-glass-panel">
+            <h3 style="color: #333; margin-top: 0; font-family: 'Poppins', sans-serif;">💡 Targeted Revision Hub</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px; font-family: 'Poppins', sans-serif;">Watch this short video to master the concept!</p>
+            <iframe id="revision-video" width="100%" height="280" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="border-radius: 8px; margin-bottom: 15px;"></iframe>
+            <br>
+            <button onclick="closeRevisionModal()" style="background-color: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-family: 'Poppins', sans-serif;">Close & Return</button>
+        </div>
+    </div>
+
+    <script>
+        // 控制弹窗的动作
+        function openRevisionModal(videoUrl) {
+            document.getElementById("revision-video").src = videoUrl;
+            document.getElementById("revision-modal").style.display = "flex";
+        }
+        function closeRevisionModal() {
+            document.getElementById("revision-modal").style.display = "none";
+            document.getElementById("revision-video").src = ""; // 清空视频防声音残留
+        }
+    </script>
+    <!-- ====== 新增结束 ====== -->
+
+    <!-- ⚠️ 军师保命修复：必须在这里加上 ai-engine.js，否则系统找不到诊断函数 -->
+    <script src="../js/ai-engine.js"></script> 
+    <script src="../js/db.js"></script>
+    <script src="../js/assessment-report.js"></script>
+</body>
+</html>
