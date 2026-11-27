@@ -115,31 +115,46 @@
         .kpi-value { font-size: 1.55rem; font-weight: 700; color: #1e1b4b; margin-top: 6px; word-break: break-word; }
         .kpi-sub { font-size: 0.76rem; color: #64748b; margin-top: 3px; }
 
+        /* 雷达图模式切换 */
+        .mode-toggle { display: inline-flex; background: #f1f5f9; border-radius: 10px; padding: 3px; gap: 3px; }
+        .mode-btn { border: none; background: transparent; color: #64748b; padding: 5px 11px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: 0.18s; }
+        .mode-btn.active { background: white; color: #7e22ce; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
         .radar-wrapper { position: relative; height: 370px; display: flex; align-items: center; justify-content: center; }
-        .mastery-list { display: flex; flex-direction: column; gap: 12px; max-height: 370px; overflow-y: auto; padding-right: 4px; }
-        .mastery-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 11px 14px; }
+        .mastery-list { display: flex; flex-direction: column; gap: 10px; max-height: 370px; overflow-y: auto; padding-right: 4px; }
+        .mastery-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; }
         .mastery-row.weak-row { background: #fef2f2; border-color: #fecaca; }
-        .mastery-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 0.84rem; font-weight: 600; }
-        .bar-track { width: 100%; height: 9px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+        .mastery-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.83rem; font-weight: 600; }
+        .bar-track { width: 100%; height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
         .bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
 
         .data-table-wrap { overflow-x: auto; }
-        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
         .data-table th { text-align: left; padding: 11px 12px; background: #f8fafc; color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
         .data-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
-        .data-table tr:hover td { background: #faf5ff; }
-        .pbd-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; }
-        .pbd-high { background: #dcfce7; color: #166534; }
-        .pbd-mid { background: #fef3c7; color: #b45309; }
+        .data-table tbody tr.clickable-row { cursor: pointer; transition: background 0.15s; }
+        .data-table tbody tr.clickable-row:hover td { background: #faf5ff; }
+        .pbd-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.74rem; font-weight: 700; }
+        .pbd-graded { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .pbd-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
         .pbd-low { background: #fee2e2; color: #b91c1c; }
+
+        /* 个人学生诊断与 PBD 评分弹窗 */
+        .eval-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 22px; align-items: start; margin-top: 14px; }
+        .tp-selector-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 8px 0 12px; }
+        .tp-btn { padding: 10px 6px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; text-align: center; }
+        .tp-btn:hover { border-color: #9333ea; color: #7e22ce; background: #faf5ff; }
+        .tp-btn.selected { background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); color: white; border-color: #7e22ce; box-shadow: 0 5px 14px rgba(147, 51, 234, 0.3); }
+        .eval-tag-scroll { max-height: 215px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; margin-bottom: 14px; }
 
         .empty-bank { text-align: center; color: #94a3b8; padding: 32px 16px; font-style: italic; font-size: 0.88rem; }
 
         /* 通用弹窗 */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
         .modal-overlay.show { display: flex; }
-        .modal-box { background: white; padding: 30px; border-radius: 24px; max-width: 460px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-box { background: white; padding: 28px; border-radius: 24px; max-width: 460px; width: 100%; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.2); max-height: 92vh; overflow-y: auto; }
         .modal-box.wide { max-width: 620px; text-align: left; }
+        .modal-box.xl { max-width: 960px; text-align: left; }
         .big-pin { font-family: monospace; font-size: 2.5rem; font-weight: 800; letter-spacing: 8px; color: #7e22ce; background: #faf5ff; border: 2px dashed #c084fc; border-radius: 16px; padding: 16px; margin: 18px 0; }
         .progress-track { width: 100%; height: 10px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 10px 0; display: none; }
         .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #9333ea, #16a34a); transition: width 0.2s; }
@@ -438,12 +453,12 @@
             </div>
         </div>
 
-        <!-- ==================== 视图 4：班级诊断分析与雷达图 ==================== -->
+        <!-- ==================== 视图 4：班级诊断分析 & 个人 PBD 评定 ==================== -->
         <div id="view-analytics" class="view-section">
             <div class="analytics-toolbar">
                 <div class="header">
-                    <h1>📊 Class Diagnostic Analytics (PBD)</h1>
-                    <p>Identify class-wide weak KSSR Standard 6 tags via Radar Chart and launch instant Dual-AI remedial drills.</p>
+                    <h1>📊 Class Diagnostic Analytics & PBD Grading</h1>
+                    <p>Review class-wide KSSR mastery, then click any student below to inspect their individual radar chart and assign official PBD Band (TP 1–TP 6).</p>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                     <select id="analytics-subject-filter" class="form-control" style="width:auto; min-width:150px;">
@@ -463,7 +478,7 @@
                 <div class="kpi-card">
                     <div class="kpi-label">Submissions Analyzed</div>
                     <div class="kpi-value" id="kpi-submissions">0</div>
-                    <div class="kpi-sub">Standard 6 student records</div>
+                    <div class="kpi-sub" id="kpi-graded-progress">0 graded by teacher</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-label">Class Average</div>
@@ -472,22 +487,28 @@
                 </div>
                 <div class="kpi-card" style="border-left: 4px solid #ef4444;">
                     <div class="kpi-label">Weakest KSSR Tag</div>
-                    <div class="kpi-value" id="kpi-weakest-tag" style="font-size:1.1rem; color:#dc2626;">--</div>
-                    <div class="kpi-sub" id="kpi-weakest-pct">Priority for remediation</div>
+                    <div class="kpi-value" id="kpi-weakest-tag" style="font-size:1.08rem; color:#dc2626;">--</div>
+                    <div class="kpi-sub" id="kpi-weakest-pct">Lowest class accuracy</div>
                 </div>
                 <div class="kpi-card" style="border-left: 4px solid #16a34a;">
                     <div class="kpi-label">Strongest KSSR Tag</div>
-                    <div class="kpi-value" id="kpi-strongest-tag" style="font-size:1.1rem; color:#15803d;">--</div>
-                    <div class="kpi-sub" id="kpi-strongest-pct">Highest class mastery</div>
+                    <div class="kpi-value" id="kpi-strongest-tag" style="font-size:1.08rem; color:#15803d;">--</div>
+                    <div class="kpi-sub" id="kpi-strongest-pct">Highest class accuracy</div>
                 </div>
             </div>
 
-            <!-- 中间：左侧雷达图 + 右侧薄弱标签预警与一键 AI 补弱 -->
+            <!-- 中间：左侧全班平均雷达图（支持 Weakest 5 / All 切换）+ 右侧全部标签详细掌握率 -->
             <div class="grid-analytics">
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">🕸️ Class KSSR Competency Radar</span>
-                        <span style="font-size:0.78rem; color:#64748b;">Average Accuracy (%) per Tag</span>
+                        <div>
+                            <span class="card-title">🕸️ Class Average Competency Radar</span>
+                            <div style="font-size:0.75rem; color:#64748b;" id="radar-mode-hint">Combined average of all students in selected test</div>
+                        </div>
+                        <div class="mode-toggle">
+                            <button type="button" class="mode-btn active" id="radar-mode-weak5">Weakest 5 Focus</button>
+                            <button type="button" class="mode-btn" id="radar-mode-all">All Tested Tags</button>
+                        </div>
                     </div>
                     <div class="radar-wrapper">
                         <canvas id="class-radar-chart"></canvas>
@@ -499,8 +520,8 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">🚨 Tag Mastery & Remedial Actions</span>
-                        <span style="font-size:0.76rem; color:#dc2626; font-weight:600;">Red &lt; 65% Needs Drill</span>
+                        <span class="card-title">📈 All Tested KSSR Tags (Class Avg)</span>
+                        <span style="font-size:0.76rem; color:#dc2626; font-weight:600;">Red &lt; 65% Needs Focus</span>
                     </div>
                     <div class="mastery-list" id="tag-mastery-list">
                         <div class="empty-bank">No diagnostic breakdown available yet.</div>
@@ -508,10 +529,13 @@
                 </div>
             </div>
 
-            <!-- 底部：学生成绩与 PBD 等级明细表 -->
+            <!-- 底部：学生成绩明细表（点击任意行弹出个人雷达图与 PBD 评定窗） -->
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">🎓 Student Assessment Submissions & PBD Band</span>
+                    <div>
+                        <span class="card-title">🎓 Student Assessment Submissions & PBD Evaluation</span>
+                        <div style="font-size:0.78rem; color:#64748b;">Click any student row to view their individual radar chart and confirm official TP 1–TP 6 grade.</div>
+                    </div>
                     <span id="table-count-pill" style="background:#f3e8ff; color:#7e22ce; padding:4px 11px; border-radius:20px; font-size:0.78rem; font-weight:600;">0 Records</span>
                 </div>
                 <div class="data-table-wrap">
@@ -520,17 +544,80 @@
                             <tr>
                                 <th>Student Name</th>
                                 <th>Assessment (PIN)</th>
-                                <th>Subject</th>
                                 <th>Score</th>
-                                <th>PBD Band</th>
                                 <th>Weakest Tag</th>
+                                <th>Teacher PBD Grade</th>
                                 <th>Submitted</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="student-results-tbody">
                             <tr><td colspan="7" class="empty-bank">No student submissions found.</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 学生个人精准诊断 & 老师 PBD 评分弹窗 ==================== -->
+    <div id="student-eval-modal" class="modal-overlay">
+        <div class="modal-box xl">
+            <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:10px;">
+                <div>
+                    <h2 id="eval-student-name" style="color:#1e1b4b; font-size:1.35rem;">Student Name</h2>
+                    <div id="eval-test-meta" style="font-size:0.82rem; color:#64748b; margin-top:2px;">Assessment Info</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span id="eval-score-badge" style="background:#f3e8ff; color:#7e22ce; padding:6px 14px; border-radius:99px; font-weight:700; font-size:0.9rem;">0/0 (0%)</span>
+                    <button type="button" id="close-eval-modal-btn" class="btn-sm btn-danger" style="padding:7px 12px;">✕ Close</button>
+                </div>
+            </div>
+
+            <div class="eval-grid">
+                <!-- 左侧：该学生个人雷达图（叠加全班平均虚线） -->
+                <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:18px; padding:18px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <strong style="color:#1e1b4b; font-size:0.95rem;">🕸️ Individual Diagnostic Radar</strong>
+                        <span style="font-size:0.74rem; color:#64748b;">Purple = Student | Gray Dashed = Class Avg</span>
+                    </div>
+                    <div style="position:relative; height:360px;">
+                        <canvas id="student-radar-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 右侧：各标签精确得分 + 老师亲手评定 TP 1–TP 6 -->
+                <div>
+                    <div style="font-weight:700; color:#1e1b4b; font-size:0.95rem; margin-bottom:8px;">📋 Exact Mastery per KSSR Tag</div>
+                    <div class="eval-tag-scroll" id="eval-tag-list"></div>
+
+                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:16px; padding:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <strong style="color:#1e1b4b; font-size:0.95rem;">👩‍🏫 Teacher Official PBD Grade</strong>
+                            <span id="eval-ref-pbd" style="font-size:0.76rem; color:#64748b; font-weight:600;">System Ref: TP 4</span>
+                        </div>
+                        <p style="font-size:0.76rem; color:#64748b; margin-bottom:8px;">
+                            Select the student's final Tahap Penguasaan (TP 1–TP 6) based on the radar chart evidence:
+                        </p>
+
+                        <div class="tp-selector-grid" id="eval-tp-selector">
+                            <button type="button" class="tp-btn" data-tp="TP 1">TP 1</button>
+                            <button type="button" class="tp-btn" data-tp="TP 2">TP 2</button>
+                            <button type="button" class="tp-btn" data-tp="TP 3">TP 3</button>
+                            <button type="button" class="tp-btn" data-tp="TP 4">TP 4</button>
+                            <button type="button" class="tp-btn" data-tp="TP 5">TP 5</button>
+                            <button type="button" class="tp-btn" data-tp="TP 6">TP 6</button>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label class="form-label" style="font-size:0.82rem;">Teacher Remark / Feedback (Visible to Student)</label>
+                            <textarea id="eval-teacher-remark" class="form-control" style="min-height:64px; font-size:0.84rem;" placeholder="e.g. Strong in Money & Whole Numbers, needs more practice on 24-hour Time conversion."></textarea>
+                        </div>
+
+                        <button type="button" id="save-pbd-grade-btn" class="submit-btn btn-green">
+                            💾 Confirm & Save PBD Grade to Firestore
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

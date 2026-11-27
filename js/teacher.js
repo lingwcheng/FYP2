@@ -1,4 +1,4 @@
-// === js/teacher.js (完整收官版：题库组卷 + 批量导入 + Protected FIFO + 真·双AI + 自创打标 + 班级诊断雷达图) ===
+// === js/teacher.js (完整定稿版：题库组卷 + 批量导入 + Protected FIFO + 真·双AI + 自创打标 + 班级/个人雷达图 & 老师 PBD 评分) ===
 import { auth } from "./firebase-config.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { DB } from "./db.js";
@@ -41,7 +41,13 @@ let filteredApprovedCache = [];
 let allAssessmentsCache = [];
 let allResultsCache = [];
 let tagQuotaLimit = 2000;
+
 let radarChartInstance = null;
+let studentRadarChartInstance = null;
+let radarViewMode = "weakest5";          // "weakest5" | "all"
+let currentClassAvgByTag = {};           // 当前筛选条件下的全班各标签平均分（供个人弹窗虚线对比）
+let activeEvalResultId = null;           // 当前正在评分的学生成绩文档 ID
+let selectedEvalTp = "";                 // 老师在弹窗中选中的 TP 1 - TP 6
 
 let selectedCartIds = new Set();
 let selectedAiReviewIds = new Set();
@@ -120,17 +126,34 @@ const analyticsTestFilterEl = document.getElementById("analytics-test-filter");
 const seedDemoResultsBtn = document.getElementById("seed-demo-results-btn");
 const clearDemoResultsBtn = document.getElementById("clear-demo-results-btn");
 const kpiSubmissionsEl = document.getElementById("kpi-submissions");
+const kpiGradedProgressEl = document.getElementById("kpi-graded-progress");
 const kpiAvgScoreEl = document.getElementById("kpi-avg-score");
 const kpiAvgPbdEl = document.getElementById("kpi-avg-pbd");
 const kpiWeakestTagEl = document.getElementById("kpi-weakest-tag");
 const kpiWeakestPctEl = document.getElementById("kpi-weakest-pct");
 const kpiStrongestTagEl = document.getElementById("kpi-strongest-tag");
 const kpiStrongestPctEl = document.getElementById("kpi-strongest-pct");
+const radarModeWeak5Btn = document.getElementById("radar-mode-weak5");
+const radarModeAllBtn = document.getElementById("radar-mode-all");
+const radarModeHintEl = document.getElementById("radar-mode-hint");
 const radarCanvasEl = document.getElementById("class-radar-chart");
 const radarEmptyMsgEl = document.getElementById("radar-empty-msg");
 const tagMasteryListEl = document.getElementById("tag-mastery-list");
 const tableCountPillEl = document.getElementById("table-count-pill");
 const studentResultsTbodyEl = document.getElementById("student-results-tbody");
+
+// 学生个人诊断 & PBD 评分弹窗 DOM
+const studentEvalModal = document.getElementById("student-eval-modal");
+const closeEvalModalBtn = document.getElementById("close-eval-modal-btn");
+const evalStudentNameEl = document.getElementById("eval-student-name");
+const evalTestMetaEl = document.getElementById("eval-test-meta");
+const evalScoreBadgeEl = document.getElementById("eval-score-badge");
+const studentRadarCanvasEl = document.getElementById("student-radar-chart");
+const evalTagListEl = document.getElementById("eval-tag-list");
+const evalRefPbdEl = document.getElementById("eval-ref-pbd");
+const evalTpSelectorEl = document.getElementById("eval-tp-selector");
+const evalTeacherRemarkEl = document.getElementById("eval-teacher-remark");
+const savePbdGradeBtn = document.getElementById("save-pbd-grade-btn");
 
 // PIN 弹窗
 const pinModal = document.getElementById("pin-modal");
@@ -193,7 +216,6 @@ closePinModalBtn.addEventListener("click", () => {
     pinModal.classList.remove("show");
 });
 
-// 切换左侧视图的通用函数
 function switchActiveView(viewId) {
     navItems.forEach((b) => b.classList.toggle("active", b.dataset.view === viewId));
     viewSections.forEach((s) => s.classList.toggle("active", s.id === viewId));
@@ -202,7 +224,6 @@ function switchActiveView(viewId) {
     }
 }
 
-// 收集所有已被现有 PIN 考卷占用的题目 ID
 function getProtectedQuestionIdSet(extraProtectedIds = []) {
     const protectedSet = new Set(extraProtectedIds);
     allAssessmentsCache.forEach((assessment) => {
@@ -221,14 +242,26 @@ function extractKssrTopicTags(questions) {
     return Array.from(found);
 }
 
-// 根据百分比换算马来西亚 KSSR PBD 等级（TP 1 - TP 6）
-function getPbdInfo(pct) {
-    if (pct >= 90) return { tp: "TP 6", label: "Exemplary", cls: "pbd-high" };
-    if (pct >= 80) return { tp: "TP 5", label: "Proficient", cls: "pbd-high" };
-    if (pct >= 65) return { tp: "TP 4", label: "Satisfactory", cls: "pbd-mid" };
-    if (pct >= 50) return { tp: "TP 3", label: "Moderate", cls: "pbd-mid" };
-    if (pct >= 35) return { tp: "TP 2", label: "Developing", cls: "pbd-low" };
-    return { tp: "TP 1", label: "Needs Support", cls: "pbd-low" };
+// 系统参考 PBD 等级（仅供参考，最终由老师在弹窗中手动确认）
+function getSuggestedPbd(pct) {
+    if (pct >= 90) return { tp: "TP 6", label: "Exemplary" };
+    if (pct >= 80) return { tp: "TP 5", label: "Proficient" };
+    if (pct >= 65) return { tp: "TP 4", label: "Satisfactory" };
+    if (pct >= 50) return { tp: "TP 3", label: "Moderate" };
+    if (pct >= 35) return { tp: "TP 2", label: "Developing" };
+    return { tp: "TP 1", label: "Needs Support" };
+}
+
+function getPbdLabel(tp) {
+    const map = {
+        "TP 6": "Exemplary",
+        "TP 5": "Proficient",
+        "TP 4": "Satisfactory",
+        "TP 3": "Moderate",
+        "TP 2": "Developing",
+        "TP 1": "Needs Support"
+    };
+    return map[tp] || "";
 }
 
 // ================= 1. 登录认证与初始化 =================
@@ -264,7 +297,6 @@ navItems.forEach((btn) => {
     btn.addEventListener("click", () => switchActiveView(btn.dataset.view));
 });
 
-// 统一刷新题库、已发布测验与学生成绩
 async function refreshCloudData() {
     try {
         const [qList, aList, rList] = await Promise.all([
@@ -914,7 +946,6 @@ startImportBtn.addEventListener("click", async () => {
     }
 });
 
-// 一键加载 8 道 KSSR 样题
 seedSampleBtn.addEventListener("click", async () => {
     if (!confirm("Add 8 verified Standard 6 KSSR sample questions (Math & Science) to your Cloud Question Bank?")) return;
     seedSampleBtn.disabled = true;
@@ -1464,7 +1495,7 @@ createForm.addEventListener("submit", async (e) => {
     }
 });
 
-// ================= 7. 视图 4：班级诊断分析、Chart.js 雷达图与 AI 一键补弱 =================
+// ================= 7. 视图 4：班级平均雷达图 + 点击学生查看个人雷达图 & 手动评定 PBD =================
 function populateAnalyticsTestFilter() {
     const subject = analyticsSubjectFilterEl.value;
     const prev = analyticsTestFilterEl.value || "ALL";
@@ -1496,6 +1527,20 @@ analyticsSubjectFilterEl.addEventListener("change", () => {
 });
 analyticsTestFilterEl.addEventListener("change", renderClassAnalytics);
 
+radarModeWeak5Btn.addEventListener("click", () => {
+    radarViewMode = "weakest5";
+    radarModeWeak5Btn.classList.add("active");
+    radarModeAllBtn.classList.remove("active");
+    renderClassAnalytics();
+});
+
+radarModeAllBtn.addEventListener("click", () => {
+    radarViewMode = "all";
+    radarModeAllBtn.classList.add("active");
+    radarModeWeak5Btn.classList.remove("active");
+    renderClassAnalytics();
+});
+
 function renderClassAnalytics() {
     const subject = analyticsSubjectFilterEl.value;
     const selectedTestKey = analyticsTestFilterEl.value;
@@ -1506,17 +1551,19 @@ function renderClassAnalytics() {
         return true;
     });
 
-    // 1. 更新 KPI 卡片
+    const gradedCount = filtered.filter((r) => Boolean(r.teacherPbd)).length;
     kpiSubmissionsEl.textContent = filtered.length;
+    kpiGradedProgressEl.textContent = `${gradedCount} / ${filtered.length} graded by teacher`;
     tableCountPillEl.textContent = `${filtered.length} Records`;
 
     if (filtered.length === 0) {
+        currentClassAvgByTag = {};
         kpiAvgScoreEl.textContent = "--%";
         kpiAvgPbdEl.textContent = "Waiting for results";
         kpiWeakestTagEl.textContent = "--";
-        kpiWeakestPctEl.textContent = "Priority for remediation";
+        kpiWeakestPctEl.textContent = "Lowest class accuracy";
         kpiStrongestTagEl.textContent = "--";
-        kpiStrongestPctEl.textContent = "Highest class mastery";
+        kpiStrongestPctEl.textContent = "Highest class accuracy";
 
         if (radarChartInstance) {
             radarChartInstance.destroy();
@@ -1532,11 +1579,11 @@ function renderClassAnalytics() {
     const avgPct = Math.round(
         filtered.reduce((sum, r) => sum + (Number(r.percentage) || 0), 0) / filtered.length
     );
-    const avgPbd = getPbdInfo(avgPct);
+    const avgRef = getSuggestedPbd(avgPct);
     kpiAvgScoreEl.textContent = `${avgPct}%`;
-    kpiAvgPbdEl.textContent = `Class Band: ${avgPbd.tp} (${avgPbd.label})`;
+    kpiAvgPbdEl.textContent = `Class Avg Ref: ${avgRef.tp} (${avgRef.label})`;
 
-    // 2. 汇总每个 KSSR 标签的全班正确率
+    // 汇总全班每个 KSSR 标签的平均掌握率
     const subjectTags = KSSR_TAGS[subject] || [];
     const tagAgg = {};
     subjectTags.forEach((t) => {
@@ -1552,7 +1599,6 @@ function renderClassAnalytics() {
         });
     });
 
-    // 只把至少考过的标签放进雷达图和排行
     const testedStats = Object.entries(tagAgg)
         .filter(([, s]) => s.total > 0)
         .map(([tag, s]) => ({
@@ -1561,6 +1607,12 @@ function renderClassAnalytics() {
             total: s.total,
             pct: Math.round((s.correct / s.total) * 100)
         }));
+
+    // 缓存当前全班各标签平均分，供点击学生时叠加到个人雷达图上
+    currentClassAvgByTag = {};
+    testedStats.forEach((item) => {
+        currentClassAvgByTag[item.tag] = item.pct;
+    });
 
     if (testedStats.length > 0) {
         const sortedAsc = [...testedStats].sort((a, b) => a.pct - b.pct);
@@ -1572,14 +1624,22 @@ function renderClassAnalytics() {
         kpiStrongestTagEl.textContent = strongest.tag;
         kpiStrongestPctEl.textContent = `${strongest.pct}% accuracy (${strongest.correct}/${strongest.total})`;
 
-        // 3. 绘制 Chart.js 诊断雷达图
+        // 根据切换模式决定雷达图展示“最弱 5 项”还是“全部已考标签”
+        let chartStats = testedStats;
+        if (radarViewMode === "weakest5" && testedStats.length > 5) {
+            chartStats = sortedAsc.slice(0, 5);
+            radarModeHintEl.textContent = `Showing the 5 weakest out of ${testedStats.length} tested tags (Class Avg)`;
+        } else {
+            radarModeHintEl.textContent = `Showing all ${testedStats.length} tested tags (Combined Class Avg)`;
+        }
+
         radarCanvasEl.style.display = "block";
         radarEmptyMsgEl.style.display = "none";
 
-        const radarLabels = testedStats.map((x) =>
+        const radarLabels = chartStats.map((x) =>
             x.tag.length > 20 ? x.tag.slice(0, 18) + "…" : x.tag
         );
-        const radarValues = testedStats.map((x) => x.pct);
+        const radarValues = chartStats.map((x) => x.pct);
 
         if (radarChartInstance) radarChartInstance.destroy();
         radarChartInstance = new Chart(radarCanvasEl.getContext("2d"), {
@@ -1588,7 +1648,7 @@ function renderClassAnalytics() {
                 labels: radarLabels,
                 datasets: [
                     {
-                        label: `Class Mastery (%) - ${subject}`,
+                        label: `Class Avg (%)`,
                         data: radarValues,
                         backgroundColor: "rgba(147, 51, 234, 0.22)",
                         borderColor: "#9333ea",
@@ -1618,14 +1678,14 @@ function renderClassAnalytics() {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => `${testedStats[ctx.dataIndex].tag}: ${ctx.raw}%`
+                            label: (ctx) => `${chartStats[ctx.dataIndex].tag}: ${ctx.raw}%`
                         }
                     }
                 }
             }
         });
 
-        // 4. 右侧薄弱标签明细 + 一键 AI 补弱按钮
+        // 右侧始终完整列出全部已考标签（从最弱排到最强，无 AI Remedial 按钮）
         tagMasteryListEl.innerHTML = sortedAsc
             .map((item) => {
                 const isWeak = item.pct < 65;
@@ -1634,12 +1694,7 @@ function renderClassAnalytics() {
                     <div class="mastery-row ${isWeak ? "weak-row" : ""}">
                         <div class="mastery-top">
                             <span style="color:#1e1b4b;">${isWeak ? "⚠️ " : ""}${escapeHtml(item.tag)}</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="color:${barColor}; font-weight:700;">${item.pct}% (${item.correct}/${item.total})</span>
-                                <button type="button" class="btn-sm btn-add-q" data-remedial-subject="${escapeHtml(subject)}" data-remedial-tag="${escapeHtml(item.tag)}">
-                                    🤖 AI Remedial
-                                </button>
-                            </div>
+                            <span style="color:${barColor}; font-weight:700;">${item.pct}% (${item.correct}/${item.total})</span>
                         </div>
                         <div class="bar-track">
                             <div class="bar-fill" style="width:${item.pct}%; background:${barColor};"></div>
@@ -1650,11 +1705,11 @@ function renderClassAnalytics() {
             .join("");
     }
 
-    // 5. 渲染底部学生成绩表
+    // 底部：学生提交明细表（点击任意行或按钮弹出个人诊断与 PBD 评定窗）
     studentResultsTbodyEl.innerHTML = filtered
         .map((r) => {
             const pct = Math.round(Number(r.percentage) || 0);
-            const pbd = getPbdInfo(pct);
+            const refPbd = getSuggestedPbd(pct);
 
             let weakestStudentTag = "—";
             const entries = Object.entries(r.tagScores || {}).filter(([, s]) => (s.total || 0) > 0);
@@ -1663,6 +1718,10 @@ function renderClassAnalytics() {
                 const wPct = Math.round((entries[0][1].correct / entries[0][1].total) * 100);
                 weakestStudentTag = `${entries[0][0]} (${wPct}%)`;
             }
+
+            const pbdCellHtml = r.teacherPbd
+                ? `<span class="pbd-pill pbd-graded">✅ ${escapeHtml(r.teacherPbd)} • ${escapeHtml(getPbdLabel(r.teacherPbd))}</span>`
+                : `<span class="pbd-pill pbd-pending">⏳ Pending (Ref: ${refPbd.tp})</span>`;
 
             const dateStr = r.completedAt?.seconds
                 ? new Date(r.completedAt.seconds * 1000).toLocaleString("en-MY", {
@@ -1674,39 +1733,198 @@ function renderClassAnalytics() {
                 : "Just now";
 
             return `
-                <tr>
-                    <td><strong>${escapeHtml(r.studentName || "Student")}</strong>${r.isDemo ? ' <span class="q-tag" style="font-size:0.65rem;">Demo</span>' : ""}</td>
+                <tr class="clickable-row" data-result-id="${r.id}">
+                    <td>
+                        <strong>${escapeHtml(r.studentName || "Student")}</strong>
+                        ${r.isDemo ? ' <span class="q-tag" style="font-size:0.65rem;">Demo</span>' : ""}
+                    </td>
                     <td>${escapeHtml(r.testTitle || "Diagnostic Test")} <span style="color:#6d28d9; font-family:monospace; font-weight:600;">#${escapeHtml(r.pin || "—")}</span></td>
-                    <td>${escapeHtml(r.subject)}</td>
                     <td><strong>${r.score ?? 0}/${r.totalQuestions ?? 0}</strong> (${pct}%)</td>
-                    <td><span class="pbd-pill ${pbd.cls}">${pbd.tp} • ${pbd.label}</span></td>
                     <td style="color:#b91c1c; font-weight:500;">${escapeHtml(weakestStudentTag)}</td>
-                    <td style="color:#64748b; font-size:0.8rem;">${escapeHtml(dateStr)}</td>
+                    <td>${pbdCellHtml}</td>
+                    <td style="color:#64748b; font-size:0.78rem;">${escapeHtml(dateStr)}</td>
+                    <td>
+                        <button type="button" class="btn-sm btn-add-q" data-inspect-id="${r.id}">
+                            ${r.teacherPbd ? "✏️ Edit Grade" : "🔍 Inspect & Grade"}
+                        </button>
+                    </td>
                 </tr>
             `;
         })
         .join("");
 }
 
-// 点击“🤖 AI Remedial”一键跳转到双 AI 出题页并预选薄弱标签
-tagMasteryListEl.addEventListener("click", (e) => {
-    const tag = e.target.dataset.remedialTag;
-    const subject = e.target.dataset.remedialSubject;
-    if (!tag || !subject) return;
-
-    aiSubjectEl.value = subject;
-    renderAiGenTagChips([tag]);
-    aiCountEl.value = 5;
-    aiDifficultyEl.value = "Mixed";
-    aiTestTitleEl.value = `Standard 6 Remedial Practice: ${tag}`;
-
-    switchActiveView("view-ai-gen");
-    document.querySelector(".main-content")?.scrollTo({ top: 0, behavior: "smooth" });
+// 点击学生表格行或按钮打开个人诊断与 PBD 评定弹窗
+studentResultsTbodyEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-inspect-id]");
+    const row = e.target.closest("tr[data-result-id]");
+    const resultId = btn?.dataset.inspectId || row?.dataset.resultId;
+    if (!resultId) return;
+    openStudentEvalModal(resultId);
 });
 
-// 一键生成演示用班级成绩（含数学与科学，方便在学生端接入前预览和答辩）
+function openStudentEvalModal(resultId) {
+    const rec = allResultsCache.find((r) => r.id === resultId);
+    if (!rec) return;
+
+    activeEvalResultId = resultId;
+    const pct = Math.round(Number(rec.percentage) || 0);
+    const refPbd = getSuggestedPbd(pct);
+
+    evalStudentNameEl.textContent = `👤 ${rec.studentName || "Student"}`;
+    evalTestMetaEl.textContent = `${rec.testTitle || "Diagnostic Test"} • ${rec.subject} • PIN #${rec.pin || "N/A"}`;
+    evalScoreBadgeEl.textContent = `${rec.score ?? 0}/${rec.totalQuestions ?? 0} (${pct}%)`;
+    evalRefPbdEl.textContent = `System Reference: ${refPbd.tp} (${refPbd.label})`;
+
+    // 预选老师此前已评过的 TP，若尚未评定则默认高亮参考 TP 方便老师微调
+    selectedEvalTp = rec.teacherPbd || refPbd.tp;
+    updateTpButtonSelection();
+    evalTeacherRemarkEl.value = rec.teacherRemark || "";
+
+    // 提取该学生本次考过的所有 KSSR 标签成绩（按从弱到强排列）
+    const tagEntries = Object.entries(rec.tagScores || {})
+        .filter(([, stat]) => (Number(stat.total) || 0) > 0)
+        .map(([tag, stat]) => {
+            const c = Number(stat.correct) || 0;
+            const t = Number(stat.total) || 0;
+            return { tag, correct: c, total: t, pct: Math.round((c / t) * 100) };
+        });
+
+    const sortedWeakFirst = [...tagEntries].sort((a, b) => a.pct - b.pct);
+
+    evalTagListEl.innerHTML = sortedWeakFirst.length
+        ? sortedWeakFirst
+              .map((item) => {
+                  const isWeak = item.pct < 65;
+                  const barColor = isWeak ? "#ef4444" : item.pct >= 80 ? "#16a34a" : "#f59e0b";
+                  const clsAvg = currentClassAvgByTag[item.tag];
+                  const clsHint = clsAvg !== undefined ? ` • Class Avg ${clsAvg}%` : "";
+                  return `
+                      <div class="mastery-row ${isWeak ? "weak-row" : ""}" style="padding:8px 12px;">
+                          <div class="mastery-top" style="margin-bottom:4px; font-size:0.8rem;">
+                              <span>${isWeak ? "⚠️ " : ""}${escapeHtml(item.tag)}</span>
+                              <span style="color:${barColor}; font-weight:700;">${item.pct}% (${item.correct}/${item.total})<span style="color:#64748b; font-weight:500;">${clsHint}</span></span>
+                          </div>
+                          <div class="bar-track" style="height:6px;">
+                              <div class="bar-fill" style="width:${item.pct}%; background:${barColor};"></div>
+                          </div>
+                      </div>
+                  `;
+              })
+              .join("")
+        : '<div class="empty-bank" style="padding:14px;">No per-tag breakdown recorded.</div>';
+
+    // 先显示弹窗，再渲染 Chart.js 个人雷达图以确保画布尺寸正确
+    studentEvalModal.classList.add("show");
+
+    const labels = tagEntries.map((x) => (x.tag.length > 18 ? x.tag.slice(0, 16) + "…" : x.tag));
+    const studentVals = tagEntries.map((x) => x.pct);
+    const classAvgVals = tagEntries.map((x) => currentClassAvgByTag[x.tag] ?? 0);
+
+    if (studentRadarChartInstance) studentRadarChartInstance.destroy();
+    studentRadarChartInstance = new Chart(studentRadarCanvasEl.getContext("2d"), {
+        type: "radar",
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: rec.studentName || "Student",
+                    data: studentVals,
+                    backgroundColor: "rgba(147, 51, 234, 0.24)",
+                    borderColor: "#9333ea",
+                    borderWidth: 2.5,
+                    pointBackgroundColor: studentVals.map((v) =>
+                        v < 65 ? "#ef4444" : v >= 80 ? "#16a34a" : "#f59e0b"
+                    ),
+                    pointBorderColor: "#fff",
+                    pointRadius: 5
+                },
+                {
+                    label: "Class Average",
+                    data: classAvgVals,
+                    backgroundColor: "rgba(100, 116, 139, 0.06)",
+                    borderColor: "#94a3b8",
+                    borderWidth: 2,
+                    borderDash: [5, 4],
+                    pointRadius: 3,
+                    pointBackgroundColor: "#94a3b8"
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    min: 0,
+                    max: 100,
+                    ticks: { stepSize: 20, backdropColor: "transparent", font: { size: 10 } },
+                    pointLabels: { font: { size: 10, weight: "600" }, color: "#1e1b4b" }
+                }
+            },
+            plugins: {
+                legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label} — ${tagEntries[ctx.dataIndex].tag}: ${ctx.raw}%`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateTpButtonSelection() {
+    evalTpSelectorEl.querySelectorAll(".tp-btn").forEach((btn) => {
+        btn.classList.toggle("selected", btn.dataset.tp === selectedEvalTp);
+    });
+}
+
+evalTpSelectorEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tp-btn");
+    if (!btn) return;
+    selectedEvalTp = btn.dataset.tp;
+    updateTpButtonSelection();
+});
+
+closeEvalModalBtn.addEventListener("click", () => {
+    studentEvalModal.classList.remove("show");
+    activeEvalResultId = null;
+});
+
+// 保存老师手动评定的 PBD 等级与评语到 Firestore
+savePbdGradeBtn.addEventListener("click", async () => {
+    if (!activeEvalResultId || !selectedEvalTp) {
+        alert("⚠️ Please select a PBD band (TP 1 – TP 6) first.");
+        return;
+    }
+
+    savePbdGradeBtn.disabled = true;
+    savePbdGradeBtn.textContent = "Saving PBD Grade...";
+
+    try {
+        await DB.updateResult(activeEvalResultId, {
+            teacherPbd: selectedEvalTp,
+            teacherRemark: evalTeacherRemarkEl.value.trim(),
+            gradedBy: currentUserProfile?.name || "Teacher"
+        });
+
+        studentEvalModal.classList.remove("show");
+        activeEvalResultId = null;
+        await refreshCloudData();
+        alert(`✅ Official PBD Grade (${selectedEvalTp}) saved to Firestore!`);
+    } catch (err) {
+        console.error("Save PBD Error:", err);
+        alert("❌ Failed to save PBD grade: " + err.message);
+    } finally {
+        savePbdGradeBtn.disabled = false;
+        savePbdGradeBtn.textContent = "💾 Confirm & Save PBD Grade to Firestore";
+    }
+});
+
+// 一键加载包含全部 8 个标签的 Demo 班级成绩（方便测试 Weakest 5 / All 切换与个人评分）
 seedDemoResultsBtn.addEventListener("click", async () => {
-    if (!confirm("Add 7 realistic Standard 6 demo student results (Math & Science) to Firestore so you can preview the Class Radar Chart?")) return;
+    if (!confirm("Add 7 realistic Standard 6 demo student results (covering all 8 Math & 8 Science tags) to Firestore?")) return;
     seedDemoResultsBtn.disabled = true;
     seedDemoResultsBtn.textContent = "⏳ Loading...";
 
@@ -1715,72 +1933,84 @@ seedDemoResultsBtn.addEventListener("click", async () => {
             studentId: "demo_s1",
             studentName: "Ahmad Faiz",
             pin: "482910",
-            testTitle: "Standard 6 Math Diagnostic 1",
+            testTitle: "Standard 6 Math Full-Syllabus Paper",
             subject: "Mathematics",
-            score: 12,
-            totalQuestions: 15,
-            percentage: 80,
+            score: 18,
+            totalQuestions: 24,
+            percentage: 75,
             isDemo: true,
             tagScores: {
                 "Whole Numbers & Operations": { correct: 3, total: 3 },
                 "Fractions, Decimals & Percentages": { correct: 2, total: 3 },
                 "Money": { correct: 3, total: 3 },
                 "Time": { correct: 1, total: 3 },
-                "Coordinates, Ratio & Proportion": { correct: 3, total: 3 }
+                "Measurement": { correct: 2, total: 3 },
+                "Space": { correct: 2, total: 3 },
+                "Coordinates, Ratio & Proportion": { correct: 3, total: 3 },
+                "Data Handling & Likelihood": { correct: 2, total: 3 }
             }
         },
         {
             studentId: "demo_s2",
             studentName: "Nur Aisyah",
             pin: "482910",
-            testTitle: "Standard 6 Math Diagnostic 1",
+            testTitle: "Standard 6 Math Full-Syllabus Paper",
             subject: "Mathematics",
-            score: 14,
-            totalQuestions: 15,
-            percentage: 93,
+            score: 22,
+            totalQuestions: 24,
+            percentage: 92,
             isDemo: true,
             tagScores: {
                 "Whole Numbers & Operations": { correct: 3, total: 3 },
                 "Fractions, Decimals & Percentages": { correct: 3, total: 3 },
                 "Money": { correct: 3, total: 3 },
                 "Time": { correct: 2, total: 3 },
-                "Coordinates, Ratio & Proportion": { correct: 3, total: 3 }
+                "Measurement": { correct: 3, total: 3 },
+                "Space": { correct: 2, total: 3 },
+                "Coordinates, Ratio & Proportion": { correct: 3, total: 3 },
+                "Data Handling & Likelihood": { correct: 3, total: 3 }
             }
         },
         {
             studentId: "demo_s3",
             studentName: "Tan Wei Ming",
             pin: "482910",
-            testTitle: "Standard 6 Math Diagnostic 1",
+            testTitle: "Standard 6 Math Full-Syllabus Paper",
             subject: "Mathematics",
-            score: 8,
-            totalQuestions: 15,
-            percentage: 53,
+            score: 12,
+            totalQuestions: 24,
+            percentage: 50,
             isDemo: true,
             tagScores: {
                 "Whole Numbers & Operations": { correct: 3, total: 3 },
                 "Fractions, Decimals & Percentages": { correct: 1, total: 3 },
                 "Money": { correct: 2, total: 3 },
                 "Time": { correct: 0, total: 3 },
-                "Coordinates, Ratio & Proportion": { correct: 2, total: 3 }
+                "Measurement": { correct: 1, total: 3 },
+                "Space": { correct: 1, total: 3 },
+                "Coordinates, Ratio & Proportion": { correct: 2, total: 3 },
+                "Data Handling & Likelihood": { correct: 2, total: 3 }
             }
         },
         {
             studentId: "demo_s4",
             studentName: "Kavitha Nair",
             pin: "482910",
-            testTitle: "Standard 6 Math Diagnostic 1",
+            testTitle: "Standard 6 Math Full-Syllabus Paper",
             subject: "Mathematics",
-            score: 10,
-            totalQuestions: 15,
+            score: 16,
+            totalQuestions: 24,
             percentage: 67,
             isDemo: true,
             tagScores: {
-                "Whole Numbers & Operations": { correct: 2, total: 3 },
+                "Whole Numbers & Operations": { correct: 3, total: 3 },
                 "Fractions, Decimals & Percentages": { correct: 1, total: 3 },
                 "Money": { correct: 3, total: 3 },
                 "Time": { correct: 1, total: 3 },
-                "Coordinates, Ratio & Proportion": { correct: 3, total: 3 }
+                "Measurement": { correct: 2, total: 3 },
+                "Space": { correct: 1, total: 3 },
+                "Coordinates, Ratio & Proportion": { correct: 3, total: 3 },
+                "Data Handling & Likelihood": { correct: 2, total: 3 }
             }
         },
         {
@@ -1789,16 +2019,19 @@ seedDemoResultsBtn.addEventListener("click", async () => {
             pin: "719305",
             testTitle: "Standard 6 Science Screening",
             subject: "Science",
-            score: 11,
-            totalQuestions: 15,
-            percentage: 73,
+            score: 17,
+            totalQuestions: 24,
+            percentage: 71,
             isDemo: true,
             tagScores: {
                 "Microorganisms": { correct: 3, total: 3 },
                 "Force": { correct: 1, total: 3 },
                 "Speed": { correct: 2, total: 3 },
                 "Food Preservation": { correct: 3, total: 3 },
-                "Eclipses": { correct: 2, total: 3 }
+                "Waste Material": { correct: 3, total: 3 },
+                "Eclipses": { correct: 1, total: 3 },
+                "Galaxies": { correct: 2, total: 3 },
+                "Stability & Strength": { correct: 2, total: 3 }
             }
         },
         {
@@ -1807,16 +2040,19 @@ seedDemoResultsBtn.addEventListener("click", async () => {
             pin: "719305",
             testTitle: "Standard 6 Science Screening",
             subject: "Science",
-            score: 9,
-            totalQuestions: 15,
-            percentage: 60,
+            score: 14,
+            totalQuestions: 24,
+            percentage: 58,
             isDemo: true,
             tagScores: {
                 "Microorganisms": { correct: 3, total: 3 },
                 "Force": { correct: 1, total: 3 },
-                "Speed": { correct: 2, total: 3 },
+                "Speed": { correct: 1, total: 3 },
                 "Food Preservation": { correct: 2, total: 3 },
-                "Eclipses": { correct: 1, total: 3 }
+                "Waste Material": { correct: 2, total: 3 },
+                "Eclipses": { correct: 1, total: 3 },
+                "Galaxies": { correct: 2, total: 3 },
+                "Stability & Strength": { correct: 2, total: 3 }
             }
         },
         {
@@ -1825,16 +2061,19 @@ seedDemoResultsBtn.addEventListener("click", async () => {
             pin: "719305",
             testTitle: "Standard 6 Science Screening",
             subject: "Science",
-            score: 13,
-            totalQuestions: 15,
-            percentage: 87,
+            score: 21,
+            totalQuestions: 24,
+            percentage: 88,
             isDemo: true,
             tagScores: {
                 "Microorganisms": { correct: 3, total: 3 },
                 "Force": { correct: 2, total: 3 },
                 "Speed": { correct: 3, total: 3 },
                 "Food Preservation": { correct: 3, total: 3 },
-                "Eclipses": { correct: 2, total: 3 }
+                "Waste Material": { correct: 3, total: 3 },
+                "Eclipses": { correct: 2, total: 3 },
+                "Galaxies": { correct: 2, total: 3 },
+                "Stability & Strength": { correct: 3, total: 3 }
             }
         }
     ];
@@ -1844,7 +2083,7 @@ seedDemoResultsBtn.addEventListener("click", async () => {
             await DB.saveResult(rec);
         }
         await refreshCloudData();
-        alert("✅ 7 demo student results loaded! Switch between Mathematics and Science to inspect the Class Radar Charts.");
+        alert("✅ 7 demo student results loaded! Try toggling 'Weakest 5 Focus' vs 'All Tested Tags' and click any student to assign their PBD grade.");
     } catch (err) {
         alert("❌ Failed to load demo results: " + err.message);
     } finally {
@@ -1853,7 +2092,6 @@ seedDemoResultsBtn.addEventListener("click", async () => {
     }
 });
 
-// 一键清除仅标记为 Demo 的测试成绩（不会误删真实学生交卷记录）
 clearDemoResultsBtn.addEventListener("click", async () => {
     const demoOnes = allResultsCache.filter((r) => r.isDemo === true);
     if (demoOnes.length === 0) {

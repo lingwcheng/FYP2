@@ -223,7 +223,14 @@ export const DB = {
         return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     },
 
-async deleteResult(resultId) {
+    async updateResult(resultId, updatedFields) {
+        await updateDoc(doc(db, "results", resultId), {
+            ...updatedFields,
+            gradedAt: serverTimestamp()
+        });
+    },
+
+    async deleteResult(resultId) {
         await deleteDoc(doc(db, "results", resultId));
     }
 };
