@@ -66,13 +66,17 @@
         .btn-edit { background: #e0f2fe; color: #0369a1; }
         .btn-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 
-        /* 配额管理条 & 快速随机抽卷条 */
+        /* 配额管理条 & 三源混合配比抽卷条 */
         .quota-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.8rem; color: #475569; }
         .quota-controls { display: flex; align-items: center; gap: 6px; }
         .quota-input { width: 78px; padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.82rem; font-weight: 600; text-align: center; background: white; }
 
-        .autopick-box { display: flex; align-items: center; gap: 8px; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
-        .autopick-box input { width: 72px; padding: 7px 8px; border: 1px solid #c4b5fd; border-radius: 8px; font-weight: 600; text-align: center; background: white; font-size: 0.86rem; }
+        .autopick-box { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+        .autopick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; }
+        .autopick-field { background: white; border: 1px solid #e9d5ff; border-radius: 10px; padding: 6px 8px; text-align: center; }
+        .autopick-field label { display: block; font-size: 0.71rem; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+        .autopick-field input { width: 100%; padding: 5px; border: 1px solid #c4b5fd; border-radius: 7px; font-weight: 700; text-align: center; font-size: 0.86rem; color: #4c1d95; outline: none; }
+        .cart-mix-summary { font-size: 0.76rem; color: #5b21b6; background: #faf5ff; border: 1px dashed #d8b4fe; border-radius: 10px; padding: 7px 11px; margin-bottom: 10px; font-weight: 600; }
 
         /* 筛选栏与列表 */
         .filter-grid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -193,11 +197,11 @@
     <!-- ==================== 主内容区 ==================== -->
     <div class="main-content">
 
-        <!-- 视图 1：从题库选题出卷 + 配额管理 + 批量导入 + 生成 PIN -->
+        <!-- 视图 1：从题库选题出卷 + 配额管理 + 批量导入 + 混合组卷 PIN -->
         <div id="view-bank" class="view-section active">
             <div class="header" style="margin-bottom: 20px;">
                 <h1>Question Bank & Assessment Builder</h1>
-                <p>Filter KSSR Standard 6 questions by tags, auto-pick or manually select questions, and generate a PIN for students.</p>
+                <p>Filter KSSR Standard 6 questions by tags, mix System Bank, Custom, and Dual-AI questions, and generate a PIN for students.</p>
             </div>
 
             <div class="grid-bank">
@@ -209,6 +213,7 @@
                         </div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button type="button" id="open-import-btn" class="btn-outline">📥 Bulk Import (JSON/CSV)</button>
+                            <button type="button" id="dedupe-bank-btn" class="btn-outline" style="color:#dc2626; border-color:#fecaca;">🧹 Remove Duplicates</button>
                             <button type="button" id="seed-sample-btn" class="btn-outline">⚡ Load 8 Sample Qs</button>
                         </div>
                     </div>
@@ -228,8 +233,7 @@
 
                     <div class="filter-grid">
                         <select id="filter-subject" class="form-control">
-                            <option value="ALL">All Subjects</option>
-                            <option value="Mathematics">Mathematics</option>
+                            <option value="Mathematics" selected>Mathematics</option>
                             <option value="Science">Science</option>
                         </select>
                         <select id="filter-tag" class="form-control">
@@ -259,10 +263,33 @@
                             </div>
                         </div>
 
+                        <!-- 方式 B：多选标签 + 三源配比随机抽题 -->
                         <div class="autopick-box">
-                            <span style="font-size:0.82rem; font-weight:600; color:#5b21b6; flex:1;">🎲 Quick Auto-Pick from filtered bank:</span>
-                            <input type="number" id="autopick-count" min="1" max="100" value="10">
-                            <button type="button" id="autopick-btn" class="btn-sm btn-add-q in-cart" style="padding:7px 12px;">Pick Qs</button>
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                                <span style="font-size:0.82rem; font-weight:700; color:#5b21b6;">🎲 Hybrid Auto-Pick (Mix by Source)</span>
+                                <span id="autopick-avail-hint" style="font-size:0.72rem; color:#64748b;">Avail: 0 Sys | 0 Custom | 0 AI</span>
+                            </div>
+                            <div style="font-size:0.74rem; color:#64748b; margin-bottom:5px; font-weight:500;">
+                                Target KSSR Tags (Multi-Select; leave empty for all tags):
+                            </div>
+                            <div id="autopick-tag-chips" class="tag-selector" style="max-height:115px; margin-bottom:8px; background:white;"></div>
+                            <div class="autopick-grid">
+                                <div class="autopick-field">
+                                    <label for="autopick-sys">🏛️ System</label>
+                                    <input type="number" id="autopick-sys" min="0" max="100" value="4">
+                                </div>
+                                <div class="autopick-field">
+                                    <label for="autopick-custom">👩‍🏫 Custom</label>
+                                    <input type="number" id="autopick-custom" min="0" max="100" value="2">
+                                </div>
+                                <div class="autopick-field">
+                                    <label for="autopick-ai">🤖 Dual-AI</label>
+                                    <input type="number" id="autopick-ai" min="0" max="100" value="4">
+                                </div>
+                            </div>
+                            <button type="button" id="autopick-btn" class="btn-sm btn-add-q in-cart" style="width:100%; padding:8px 12px; font-size:0.82rem;">
+                                🎲 Auto-Pick Hybrid Mix into Test Paper
+                            </button>
                         </div>
 
                         <div class="form-group">
@@ -270,8 +297,10 @@
                             <input type="text" id="test-title-input" class="form-control" placeholder="e.g. Standard 6 Math Midterm Paper (40 Qs)">
                         </div>
 
+                        <div id="cart-mix-summary" class="cart-mix-summary" style="display:none;"></div>
+
                         <div class="cart-list" id="cart-list">
-                            <div class="empty-bank" style="padding:18px;">Click "+ Add to Test" or use Quick Auto-Pick above.</div>
+                            <div class="empty-bank" style="padding:18px;">Click "+ Add to Test", use Hybrid Auto-Pick above, or send questions from Dual-AI Generator.</div>
                         </div>
 
                         <button type="button" id="generate-bank-test-btn" class="submit-btn btn-green">
@@ -291,11 +320,11 @@
             </div>
         </div>
 
-        <!-- 视图 2：双 AI 多标签出题 + 审核/编辑 + 直接发 PIN -->
+        <!-- 视图 2：双 AI 多标签出题 + 审核/编辑 + 加入试卷篮或直接发 PIN -->
         <div id="view-ai-gen" class="view-section">
             <div class="header" style="margin-bottom: 20px;">
                 <h1>🤖 Dual-AI Test Generator & Teacher Review</h1>
-                <p><strong>Human-in-the-Loop:</strong> Gemini 3.5 Flash-Lite drafts → GPT-OSS 120B (Groq) cross-verifies → Teacher selects, edits, and generates a live Test PIN.</p>
+                <p><strong>Human-in-the-Loop:</strong> Gemini 3.5 Flash-Lite drafts → GPT-OSS 120B (Groq) cross-verifies → Teacher selects, edits, mixes into a test paper, or generates a live Test PIN.</p>
             </div>
 
             <div class="grid-ai">
@@ -368,14 +397,18 @@
                             <label class="form-label">Test Title (for checked questions: <span id="ai-selected-count">0</span>)</label>
                             <input type="text" id="ai-test-title" class="form-control" placeholder="e.g. AI Diagnostic Test - Standard 6 Science">
                         </div>
-                        <div class="row-2">
-                            <button type="button" id="approve-and-publish-btn" class="submit-btn btn-green">
-                                🎯 Approve Selected & Generate PIN
+                        <!-- 方式 A：批准并直接加入混合试卷篮 / 或立即独立发 PIN / 或仅入库 -->
+                        <div class="row-2" style="margin-bottom: 10px;">
+                            <button type="button" id="approve-add-cart-btn" class="submit-btn">
+                                ➕ Approve & Add to Test Paper
                             </button>
-                            <button type="button" id="approve-only-btn" class="btn-outline" style="width:100%; font-size:0.9rem;">
-                                💾 Only Save Selected to Bank
+                            <button type="button" id="approve-and-publish-btn" class="submit-btn btn-green">
+                                🎯 Approve & Generate PIN Now
                             </button>
                         </div>
+                        <button type="button" id="approve-only-btn" class="btn-outline" style="width:100%; font-size:0.88rem; padding:10px;">
+                            💾 Only Save Selected to Cloud Bank
+                        </button>
                     </div>
                 </div>
             </div>

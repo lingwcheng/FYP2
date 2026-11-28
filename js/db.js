@@ -1,4 +1,4 @@
-// === js/db.js (Firebase Firestore 云端数据库版 - 含批量导入与 Protected FIFO 配额管理) ===
+// === js/db.js (Firebase Firestore 云端数据库版 - 含批量导入、Protected FIFO 与单条成绩读取) ===
 import { db } from "./firebase-config.js";
 import {
     collection,
@@ -113,7 +113,6 @@ export const DB = {
 
         for (const tag of uniqueTags) {
             const tagQuestions = await this.getQuestionsByTag(tag);
-            // 仅统计已审核通过且本次尚未被删的题目
             const approved = tagQuestions.filter(
                 (q) => q.status === "approved" && !deletedIds.has(q.id)
             );
@@ -122,13 +121,12 @@ export const DB = {
 
             const excess = approved.length - maxPerTag;
 
-            // 筛选可淘汰候选：仅限 Dual-AI 来源，且不在保护名单（现有 PIN 考卷 / 本次刚批准的新题）中
             const evictable = approved
                 .filter((q) => {
                     const src = q.source || (q.aiVerification ? "Dual-AI" : "Teacher Custom");
                     return src === "Dual-AI" && !protectedIdsSet.has(q.id);
                 })
-                .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); // 最早的排最前
+                .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
 
             const toDelete = evictable.slice(0, excess);
             for (const q of toDelete) {
@@ -221,6 +219,11 @@ export const DB = {
     async getAllResults() {
         const snap = await getDocs(collection(db, "results"));
         return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+
+    async getResultById(resultId) {
+        const snap = await getDoc(doc(db, "results", resultId));
+        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
     },
 
     async updateResult(resultId, updatedFields) {

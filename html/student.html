@@ -8,121 +8,218 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background: linear-gradient(135deg, #e4edff 0%, #f1eaff 50%, #e0f7f2 100%); min-height: 100vh; display: flex; overflow-x: hidden; color: #1e293b; }
-        .bg-orb-1 { position: absolute; top: 5%; right: 5%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(67,24,255,0.12) 0%, transparent 70%); z-index: 0; }
-        .sidebar { width: 260px; min-height: 100vh; padding: 30px 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.6); display: flex; flex-direction: column; z-index: 10; }
-        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; padding-left: 10px; color:#1e1b4b; cursor: pointer; }
-        .nav-menu { display: flex; flex-direction: column; gap: 5px; flex-grow: 1; }
-        .nav-item { padding: 12px 15px; border-radius: 12px; text-decoration: none; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 15px; transition: all 0.3s; cursor: pointer;}
-        .nav-item:hover, .nav-item.active { background: #fff; color: #4318FF; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .user-profile { margin-top: auto; padding: 15px; background: rgba(255,255,255,0.6); border-radius: 15px; display: flex; align-items: center; gap: 15px; }
-        .avatar { width: 40px; height: 40px; background: #fed7aa; border-radius: 50%; font-size:24px; text-align:center; line-height:40px;}
-        .main-content { flex-grow: 1; padding: 40px; z-index: 10; position: relative; display: flex; flex-direction: column; align-items: center;}
-        .glass-panel { background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 30px; padding: 40px; box-shadow: 0 20px 40px rgba(31, 38, 135, 0.05); text-align: center; width: 100%; max-width: 1000px; }
-        .panel-header { margin-bottom: 30px; }
-        .panel-header h1 { font-size: 2.2rem; color: #1e1b4b; font-weight: 700; margin-bottom: 8px;}
-        .panel-header p { color: #64748b; }
-        .section-title { font-size: 1.1rem; font-weight: 600; color: #1e1b4b; margin-bottom: 15px; text-align: left; padding-left: 10px;}
-        .subjects-container { display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; }
-        .subject-card { flex: 1; height: 180px; background: #fff; border-radius: 20px; padding: 25px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.03); position: relative; transition: all 0.3s; cursor: pointer; border: 2px solid transparent; }
-        .subject-card:hover { transform: translateY(-5px); }
+        .bg-orb-1 { position: fixed; top: 5%; right: 5%; width: 420px; height: 420px; background: radial-gradient(circle, rgba(67,24,255,0.12) 0%, transparent 70%); z-index: 0; pointer-events: none; }
+
+        /* 侧边栏 */
+        .sidebar { width: 265px; min-height: 100vh; padding: 28px 18px; background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 34px; padding-left: 10px; color: #1e1b4b; cursor: pointer; }
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+        .nav-item { padding: 12px 15px; border-radius: 12px; color: #64748b; font-weight: 500; display: flex; align-items: center; justify-content: space-between; transition: all 0.25s; cursor: pointer; border: none; background: transparent; width: 100%; font-size: 0.9rem; text-align: left; }
+        .nav-item:hover, .nav-item.active { background: #fff; color: #4318FF; box-shadow: 0 5px 15px rgba(67, 24, 255, 0.08); font-weight: 600; }
+        .nav-badge { background: #4318FF; color: white; font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; font-weight: 700; }
+
+        .user-profile { margin-top: auto; padding: 14px; background: rgba(255,255,255,0.78); border-radius: 15px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .avatar { width: 40px; height: 40px; background: #fed7aa; border-radius: 50%; font-size: 22px; text-align: center; line-height: 40px; flex-shrink: 0; }
+        .logout-btn { width: 100%; padding: 10px; border: 1px solid #fecdd3; background: #fff1f2; color: #e11d48; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .logout-btn:hover { background: #ffe4e6; }
+
+        /* 主内容区 */
+        .main-content { flex-grow: 1; padding: 36px 40px; z-index: 10; position: relative; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+        .view-section { display: none; width: 100%; max-width: 1020px; }
+        .view-section.active { display: block; }
+
+        .glass-panel { background: rgba(255, 255, 255, 0.62); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.88); border-radius: 28px; padding: 36px; box-shadow: 0 20px 40px rgba(31, 38, 135, 0.06); width: 100%; }
+        .panel-header { margin-bottom: 26px; text-align: center; }
+        .panel-header h1 { font-size: 2rem; color: #1e1b4b; font-weight: 700; margin-bottom: 6px; }
+        .panel-header p { color: #64748b; font-size: 0.92rem; }
+
+        /* 视图 1：PIN 码加入考试 */
+        .pin-entry-box { max-width: 520px; margin: 0 auto; background: rgba(255,255,255,0.85); border: 1px solid white; border-radius: 24px; padding: 32px; text-align: center; box-shadow: 0 12px 30px rgba(67, 24, 255, 0.06); }
+        .pin-input { width: 100%; text-align: center; font-family: monospace; font-size: 2.2rem; font-weight: 800; letter-spacing: 10px; padding: 16px; border: 2px solid #cbd5e1; border-radius: 16px; outline: none; color: #4318FF; background: #f8fafc; transition: all 0.2s; margin: 16px 0; }
+        .pin-input:focus { border-color: #4318FF; background: white; box-shadow: 0 0 0 4px rgba(67, 24, 255, 0.12); }
+        .pin-error { color: #dc2626; font-size: 0.85rem; font-weight: 500; min-height: 22px; margin-bottom: 10px; }
+
+        .btn-primary { background: linear-gradient(135deg, #4318FF 0%, #6366f1 100%); color: white; border: none; padding: 14px 32px; border-radius: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 10px 22px rgba(67, 24, 255, 0.24); transition: all 0.2s; width: 100%; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(67, 24, 255, 0.32); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .exam-preview-card { display: none; margin-top: 22px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 18px; padding: 20px; text-align: left; }
+        .exam-preview-card.show { display: block; }
+        .preview-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+        .meta-pill { background: white; color: #1e1b4b; border: 1px solid #bbf7d0; padding: 4px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 600; }
+
+        /* 视图 2：自测练习（保留原有玻璃拟态风格） */
+        .section-title { font-size: 1.05rem; font-weight: 600; color: #1e1b4b; margin-bottom: 12px; text-align: left; padding-left: 4px; }
+        .subjects-container { display: flex; gap: 20px; justify-content: center; margin-bottom: 24px; }
+        .subject-card { flex: 1; height: 155px; background: #fff; border-radius: 20px; padding: 22px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.03); position: relative; transition: all 0.25s; cursor: pointer; border: 2px solid transparent; }
+        .subject-card:hover { transform: translateY(-4px); }
         .subject-card.active { border-color: #4318FF; background: #f8faff; }
         .subject-card.active-science { border-color: #10b981; background: #f0fdf4; }
-        .subject-card h3 { font-size: 1.4rem; margin-bottom: 5px; }
-        .subject-card p { color: #64748b; font-size: 0.85rem; width: 60%; }
-        .subject-img { position: absolute; bottom: 10px; right: 10px; width: 120px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1)); }
-        .standards-container { display: flex; gap: 15px; margin-bottom: 30px; }
-        .std-pill { padding: 10px 25px; background: rgba(255,255,255,0.6); border: 1px solid #e2e8f0; border-radius: 15px; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.2s; }
-        .std-pill.active { background: #4318FF; color: white; border-color: #4318FF; box-shadow: 0 8px 20px rgba(67, 24, 255, 0.2); }
-        .std-pill.active-science { background: #10b981; color: white; border-color: #10b981; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2); }
-        .subtopics-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start; padding: 20px; background: rgba(255,255,255,0.3); border-radius: 20px; margin-bottom: 30px; }
-        .topic-chip { padding: 8px 18px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 0.9rem; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.3s; user-select: none; }
-        .topic-chip:hover { border-color: #4318FF; color: #4318FF; }
-        .topic-chip.selected { background: #4318FF; color: white; border-color: #4318FF; box-shadow: 0 4px 12px rgba(67, 24, 255, 0.25); }
-        .topic-chip.selected-science { background: #10b981; color: white; border-color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); }
-        .start-btn { background: linear-gradient(135deg, #22c55e 0%, #10b981 100%); color: white; border: none; padding: 15px 50px; border-radius: 15px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25); transition: transform 0.3s; }
-        .start-btn:hover { transform: scale(1.05); opacity: 0.95; }
+        .subject-card h3 { font-size: 1.35rem; margin-bottom: 5px; }
+        .subject-card p { color: #64748b; font-size: 0.84rem; width: 65%; }
+        .subject-emoji { position: absolute; bottom: 14px; right: 20px; font-size: 3.4rem; opacity: 0.88; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 100; display: none; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 400px; border-radius: 25px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .close-btn { font-size: 1.5rem; cursor: pointer; color: #64748b; }
-        .lang-option { padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500;}
-        .lang-option:hover { border-color: #4318FF; }
-        .lang-option.active { background: #f0faff; border-color: #4318FF; color: #4318FF; }
+        .subtopics-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; padding: 18px; background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.9); border-radius: 18px; margin-bottom: 22px; }
+        .topic-chip { padding: 8px 15px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 0.85rem; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.2s; user-select: none; }
+        .topic-chip:hover { border-color: #4318FF; color: #4318FF; }
+        .topic-chip.selected { background: #4318FF; color: white; border-color: #4318FF; box-shadow: 0 4px 12px rgba(67, 24, 255, 0.22); }
+        .topic-chip.selected-science { background: #10b981; color: white; border-color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.22); }
+
+        .practice-controls { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(255,255,255,0.7); padding: 16px 20px; border-radius: 16px; }
+        .start-btn { background: linear-gradient(135deg, #22c55e 0%, #10b981 100%); color: white; border: none; padding: 13px 34px; border-radius: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25); transition: transform 0.2s; }
+        .start-btn:hover { transform: translateY(-2px); opacity: 0.96; }
+        .start-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* 视图 3：我的成绩与老师 PBD 评语 */
+        .results-list { display: flex; flex-direction: column; gap: 14px; }
+        .result-card { background: rgba(255,255,255,0.92); border: 1px solid white; border-radius: 18px; padding: 20px 22px; box-shadow: 0 6px 18px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .result-card.graded { border-left: 5px solid #16a34a; }
+        .result-card.pending { border-left: 5px solid #f59e0b; }
+        .result-card.practice { border-left: 5px solid #6366f1; }
+
+        .pbd-pill { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; }
+        .pbd-graded { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .pbd-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .pbd-practice { background: #e0e7ff; color: #4338ca; }
+        .remark-box { margin-top: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 8px 12px; border-radius: 10px; font-size: 0.82rem; }
+        .btn-report { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; padding: 9px 16px; border-radius: 10px; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-report:hover { background: #7e22ce; color: white; }
+
+        .empty-state { text-align: center; color: #94a3b8; padding: 38px 16px; font-style: italic; font-size: 0.92rem; }
     </style>
 </head>
 <body>
     <div class="bg-orb-1"></div>
+
+    <!-- ==================== 左侧导航栏 ==================== -->
     <div class="sidebar">
-        <!-- 点击 Logo 回首页 -->
         <div class="logo" onclick="window.location.href='index.html'">🛡️ EduSphere</div>
         <div class="nav-menu">
-            <a onclick="showWIP()" class="nav-item">👤 <span id="nav-prof">My Profile</span></a>
-            <a href="student.html" class="nav-item active">📝 <span id="nav-prac">Custom Practice</span></a>
-            <a onclick="openSettings()" class="nav-item">⚙️ <span id="nav-set">Settings</span></a>
+            <button class="nav-item active" data-view="view-pin">
+                <span>🔑 Join Teacher Exam</span>
+            </button>
+            <button class="nav-item" data-view="view-practice">
+                <span>📝 Self-Practice Quiz</span>
+            </button>
+            <button class="nav-item" data-view="view-results">
+                <span>📊 My Results & PBD</span>
+                <span class="nav-badge" id="results-count-badge" style="display:none;">0</span>
+            </button>
         </div>
+
         <div class="user-profile">
-            <div class="avatar">🧑‍💻</div>
-            <div><div style="font-weight:600; font-size:0.85rem;">Ali bin Ahmad</div><div style="font-size:0.75rem; color:#64748b;" id="sidebar-standard">Standard 6</div></div>
+            <div class="avatar">🧑‍🎓</div>
+            <div style="min-width:0;">
+                <div id="student-name" style="font-weight:600; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Loading...</div>
+                <div style="font-size:0.75rem; color:#64748b;" id="sidebar-standard">Standard 6 (KSSR)</div>
+            </div>
         </div>
+        <button id="logout-btn" class="logout-btn">🚪 Sign Out</button>
     </div>
 
+    <!-- ==================== 主内容区 ==================== -->
     <div class="main-content">
-        <div class="glass-panel">
-            <div class="panel-header">
-                <h1 id="txt-title">Build Your Own Quiz</h1>
-                <p id="txt-sub">Select a subject, your standard, and mix multiple chapters based on the KSSR DLP syllabus.</p>
-            </div>
 
-            <div class="section-title" id="txt-step1">1. Choose Subject</div>
-            <div class="subjects-container">
-                <div class="subject-card active" id="math-card" onclick="selectSubject(this, 'Mathematics')">
-                    <h3 style="color:#3b82f6" id="txt-math">Mathematics</h3>
-                    <p id="txt-math-desc">Numbers, Operations, Measurement & more</p>
-                    <img src="https://cdn3d.iconscout.com/3d/premium/thumb/calculator-4384666-3640243.png" class="subject-img">
+        <!-- 视图 1：输入老师 6 位 PIN 码进入正式诊断测验 -->
+        <div id="view-pin" class="view-section active">
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <h1>🔑 Join Teacher Assessment</h1>
+                    <p>Enter the 6-digit PIN shared by your teacher to start your Standard 6 KSSR diagnostic test.</p>
                 </div>
-                <div class="subject-card" id="science-card" onclick="selectSubject(this, 'Science')">
-                    <h3 style="color:#10b981" id="txt-sci">Science</h3>
-                    <p id="txt-sci-desc">Scientific Skills, Humans, Earth & Space</p>
-                    <img src="https://cdn3d.iconscout.com/3d/premium/thumb/microscope-4384664-3640241.png" class="subject-img">
+
+                <div class="pin-entry-box">
+                    <div style="font-size:2.4rem;">🎯</div>
+                    <div style="font-weight:600; color:#1e1b4b; margin-top:6px;">Enter 6-Digit Assessment PIN</div>
+                    <input type="text" id="pin-input" class="pin-input" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off">
+                    <div class="pin-error" id="pin-error-msg"></div>
+                    <button type="button" id="find-exam-btn" class="btn-primary">🔍 Find Assessment</button>
+
+                    <!-- 找到考卷后的确认卡片 -->
+                    <div class="exam-preview-card" id="exam-preview-card">
+                        <div style="font-size:0.78rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">✓ Assessment Found</div>
+                        <h3 id="preview-title" style="color:#1e1b4b; font-size:1.18rem; margin-top:4px;">Test Title</h3>
+                        <div class="preview-meta">
+                            <span class="meta-pill" id="preview-subject">Mathematics</span>
+                            <span class="meta-pill" id="preview-count">0 Questions</span>
+                            <span class="meta-pill" id="preview-teacher">By Teacher</span>
+                        </div>
+                        <p style="font-size:0.8rem; color:#475569; margin-bottom:14px;">
+                            🛡️ <strong>Integrity Notice:</strong> Switching browser tabs during this exam is monitored and recorded for your teacher.
+                        </p>
+                        <button type="button" id="start-pin-exam-btn" class="start-btn" style="width:100%;">
+                            🚀 Start Exam Now &rarr;
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <div class="section-title" id="txt-step2">2. Select Standard</div>
-            <div class="standards-container">
-                <button class="std-pill" onclick="selectStandard(this, 'Standard 4')">Standard 4</button>
-                <button class="std-pill" onclick="selectStandard(this, 'Standard 5')">Standard 5</button>
-                <button class="std-pill active" onclick="selectStandard(this, 'Standard 6')">Standard 6</button>
-            </div>
-
-            <div class="section-title" id="txt-step3">3. Pick Chapters (KSSR Syllabus)</div>
-            <div class="subtopics-grid" id="subtopics-container">
-                <!-- 由 JS 渲染 -->
-            </div>
-
-            <button class="start-btn" onclick="startQuiz()" id="btn-gen">Generate Custom Quiz &rarr;</button>
-        </div>
-    </div>
-
-    <!-- 弹窗 -->
-    <div class="modal-overlay" id="settings-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Settings</h2>
-                <span class="close-btn" onclick="closeSettings()">✕</span>
-            </div>
-            <p style="font-size:0.9rem; color:#64748b; margin-bottom: 15px;" id="modal-desc">Select Language / Pilih Bahasa</p>
-            
-            <div class="lang-option active" id="lang-en" onclick="setLanguage('en')">
-                🇬🇧 English (Default)
-            </div>
-            <div class="lang-option" id="lang-ms" onclick="setLanguage('ms')">
-                🇲🇾 Bahasa Melayu
             </div>
         </div>
+
+        <!-- 视图 2：学生自主按 KSSR 标签刷题练习（真实云端题库） -->
+        <div id="view-practice" class="view-section">
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <h1>📝 Build Your Own KSSR Practice</h1>
+                    <p>Choose a subject and mix Standard 6 KSSR topics. Questions are drawn live from the Cloud Question Bank.</p>
+                </div>
+
+                <div class="section-title">1. Choose Subject</div>
+                <div class="subjects-container">
+                    <div class="subject-card active" id="math-card" data-subject="Mathematics">
+                        <h3 style="color:#3b82f6">Mathematics</h3>
+                        <p>Whole Numbers, Fractions, Money, Time, Space & Ratio</p>
+                        <div class="subject-emoji">🧮</div>
+                    </div>
+                    <div class="subject-card" id="science-card" data-subject="Science">
+                        <h3 style="color:#10b981">Science</h3>
+                        <p>Microorganisms, Force, Speed, Eclipses, Galaxies & more</p>
+                        <div class="subject-emoji">🔬</div>
+                    </div>
+                </div>
+
+                <div class="section-title">2. Pick Standard 6 KSSR Topics (Multi-Select)</div>
+                <div class="subtopics-grid" id="subtopics-container">
+                    <div class="empty-state" style="padding:12px;">Loading cloud topics...</div>
+                </div>
+
+ <div class="practice-controls">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:0.9rem; font-weight:600; color:#1e1b4b;">
+                        <span>Questions:</span>
+                        <input
+                            type="number"
+                            id="practice-q-count"
+                            min="1"
+                            max="40"
+                            value="10"
+                            style="width:76px; padding:8px 10px; border-radius:10px; border:1px solid #cbd5e1; font-weight:700; text-align:center; background:white; color:#1e1b4b; outline:none;"
+                        >
+                        <span style="font-size:0.8rem; color:#64748b; font-weight:500;">(Max 40)</span>
+                        <span id="practice-pool-hint" style="font-size:0.8rem; color:#4318FF; font-weight:600;"></span>
+                    </div>
+                    <button type="button" class="start-btn" id="start-practice-btn">Start Custom Practice &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视图 3：我的考试成绩、老师官方 PBD 等级与评语 -->
+        <div id="view-results" class="view-section">
+            <div class="glass-panel">
+                <div class="panel-header" style="text-align:left; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h1 style="font-size:1.75rem;">📊 My Results & Teacher PBD Grades</h1>
+                        <p>Track your submitted exams, official TP 1–TP 6 evaluations from your teacher, and launch AI Remedial on mistakes.</p>
+                    </div>
+                    <button type="button" id="refresh-results-btn" class="btn-report">🔄 Refresh</button>
+                </div>
+
+                <div class="results-list" id="student-results-list">
+                    <div class="empty-state">Loading your assessment history...</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <script src="../js/settings.js"></script>
-    <script src="../js/student.js"></script>
+    <script type="module" src="../js/student.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// === js/teacher.js (完整定稿版：题库组卷 + 批量导入 + Protected FIFO + 真·双AI + 自创打标 + 班级/个人雷达图 & 老师 PBD 评分) ===
+// === js/teacher.js (完整定稿版：三源混合组卷 + 多选标签 + 一键去重 + 批量导入 + Protected FIFO + 真·双AI + 自创打标 + 班级/个人雷达图 & 老师 PBD 评分) ===
 import { auth } from "./firebase-config.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { DB } from "./db.js";
@@ -54,6 +54,7 @@ let selectedAiReviewIds = new Set();
 let uncheckedAiReviewIds = new Set();
 let selectedManualTags = new Set();
 let selectedAiGenTags = new Set();
+let selectedAutoPickTags = new Set();
 
 // DOM 引用
 const teacherNameEl = document.getElementById("teacher-name");
@@ -62,11 +63,12 @@ const navItems = document.querySelectorAll(".nav-item[data-view]");
 const viewSections = document.querySelectorAll(".view-section");
 const pendingBadgeEl = document.getElementById("pending-badge");
 
-// 视图 1：题库、配额、抽卷与组卷
+// 视图 1：题库、配额、三源配比抽卷与组卷
 const filterSubjectEl = document.getElementById("filter-subject");
 const filterTagEl = document.getElementById("filter-tag");
 const filterSourceEl = document.getElementById("filter-source");
 const filterSearchEl = document.getElementById("filter-search");
+const dedupeBankBtn = document.getElementById("dedupe-bank-btn");
 const seedSampleBtn = document.getElementById("seed-sample-btn");
 const bankCountEl = document.getElementById("bank-count");
 const bankListEl = document.getElementById("bank-list");
@@ -78,8 +80,13 @@ const runFifoNowBtn = document.getElementById("run-fifo-now-btn");
 
 const cartCountEl = document.getElementById("cart-count");
 const clearCartBtn = document.getElementById("clear-cart-btn");
-const autopickCountEl = document.getElementById("autopick-count");
+const autopickTagChipsEl = document.getElementById("autopick-tag-chips");
+const autopickSysEl = document.getElementById("autopick-sys");
+const autopickCustomEl = document.getElementById("autopick-custom");
+const autopickAiEl = document.getElementById("autopick-ai");
+const autopickAvailHintEl = document.getElementById("autopick-avail-hint");
 const autopickBtn = document.getElementById("autopick-btn");
+const cartMixSummaryEl = document.getElementById("cart-mix-summary");
 const cartListEl = document.getElementById("cart-list");
 const testTitleInput = document.getElementById("test-title-input");
 const generateBankTestBtn = document.getElementById("generate-bank-test-btn");
@@ -111,6 +118,7 @@ const pendingCountEl = document.getElementById("pending-count");
 const reviewListEl = document.getElementById("review-list");
 const aiSelectedCountEl = document.getElementById("ai-selected-count");
 const aiTestTitleEl = document.getElementById("ai-test-title");
+const approveAddCartBtn = document.getElementById("approve-add-cart-btn");
 const approveAndPublishBtn = document.getElementById("approve-and-publish-btn");
 const approveOnlyBtn = document.getElementById("approve-only-btn");
 
@@ -170,6 +178,19 @@ function escapeHtml(text) {
 
 function generateSixDigitPin() {
     return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function getQuestionSource(q) {
+    return q.source || (q.aiVerification ? "Dual-AI" : "Teacher Custom");
 }
 
 async function copyTextToClipboard(text) {
@@ -391,13 +412,13 @@ runFifoNowBtn.addEventListener("click", async () => {
     }
 });
 
-// ================= 3. 视图 1：题库筛选、在线编辑、一键随机抽卷、PIN 列表 =================
+// ================= 3. 视图 1：题库筛选、多选标签抽卷、一键去重、PIN 列表 =================
 function populateFilterTags() {
     const prevSelected = filterTagEl.value || "ALL";
     const sub = filterSubjectEl.value;
-    const tags = sub === "ALL" ? [...KSSR_TAGS.Mathematics, ...KSSR_TAGS.Science] : (KSSR_TAGS[sub] || []);
+    const tags = KSSR_TAGS[sub] || [];
 
-    const approved = allQuestionsCache.filter((q) => q.status === "approved");
+    const approved = allQuestionsCache.filter((q) => q.status === "approved" && q.subject === sub);
     const countMap = {};
     approved.forEach((q) => {
         (q.tags || []).forEach((t) => {
@@ -406,7 +427,7 @@ function populateFilterTags() {
     });
 
     filterTagEl.innerHTML =
-        `<option value="ALL">All KSSR Tags (${approved.length} Total)</option>` +
+        `<option value="ALL">All ${escapeHtml(sub)} Tags (${approved.length} Total)</option>` +
         tags
             .map((t) => {
                 const cnt = countMap[t] || 0;
@@ -417,9 +438,42 @@ function populateFilterTags() {
     if (prevSelected !== "ALL" && tags.includes(prevSelected)) {
         filterTagEl.value = prevSelected;
     }
+
+    renderAutoPickTagChips();
 }
 
+function renderAutoPickTagChips() {
+    const sub = filterSubjectEl.value;
+    const tags = KSSR_TAGS[sub] || [];
+    const validSet = new Set(tags);
+
+    for (const t of [...selectedAutoPickTags]) {
+        if (!validSet.has(t)) selectedAutoPickTags.delete(t);
+    }
+
+    autopickTagChipsEl.innerHTML = tags
+        .map((t) => {
+            const isSel = selectedAutoPickTags.has(t) ? "selected" : "";
+            return `<span class="tag-chip ${isSel}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`;
+        })
+        .join("");
+}
+
+autopickTagChipsEl.addEventListener("click", (e) => {
+    if (!e.target.classList.contains("tag-chip")) return;
+    const tag = e.target.dataset.tag;
+    if (selectedAutoPickTags.has(tag)) {
+        selectedAutoPickTags.delete(tag);
+        e.target.classList.remove("selected");
+    } else {
+        selectedAutoPickTags.add(tag);
+        e.target.classList.add("selected");
+    }
+    updateAutoPickAvailability();
+});
+
 filterSubjectEl.addEventListener("change", () => {
+    selectedAutoPickTags.clear();
     populateFilterTags();
     applyBankFilter();
 });
@@ -427,27 +481,49 @@ filterTagEl.addEventListener("change", applyBankFilter);
 filterSourceEl.addEventListener("change", applyBankFilter);
 filterSearchEl.addEventListener("input", applyBankFilter);
 
+function getAutoPickPool() {
+    const sub = filterSubjectEl.value;
+    const chosenTags = Array.from(selectedAutoPickTags);
+    return allQuestionsCache.filter((q) => {
+        if (q.status !== "approved" || q.subject !== sub) return false;
+        if (selectedCartIds.has(q.id)) return false;
+        if (chosenTags.length > 0 && !(q.tags || []).some((t) => chosenTags.includes(t))) return false;
+        return true;
+    });
+}
+
+function updateAutoPickAvailability() {
+    const unselected = getAutoPickPool();
+    let sys = 0, custom = 0, ai = 0;
+    unselected.forEach((q) => {
+        const src = getQuestionSource(q);
+        if (src === "System Bank") sys++;
+        else if (src === "Dual-AI") ai++;
+        else custom++;
+    });
+    if (autopickAvailHintEl) {
+        autopickAvailHintEl.textContent = `Avail: ${sys} Sys | ${custom} Custom | ${ai} AI`;
+    }
+}
+
 function applyBankFilter() {
     const sub = filterSubjectEl.value;
     const tag = filterTagEl.value;
     const src = filterSourceEl.value;
     const keyword = filterSearchEl.value.trim().toLowerCase();
 
-    let list = allQuestionsCache.filter((q) => q.status === "approved");
+    let list = allQuestionsCache.filter((q) => q.status === "approved" && q.subject === sub);
 
-    if (sub !== "ALL") list = list.filter((q) => q.subject === sub);
     if (tag !== "ALL") list = list.filter((q) => (q.tags || []).includes(tag));
     if (src !== "ALL") {
-        list = list.filter((q) => {
-            const qSource = q.source || (q.aiVerification ? "Dual-AI" : "Teacher Custom");
-            return qSource === src;
-        });
+        list = list.filter((q) => getQuestionSource(q) === src);
     }
     if (keyword) {
         list = list.filter((q) => (q.questionText || "").toLowerCase().includes(keyword));
     }
 
     filteredApprovedCache = list;
+    updateAutoPickAvailability();
     renderApprovedBank(list);
 }
 
@@ -464,7 +540,7 @@ function renderApprovedBank(questions) {
         .map((q) => {
             const inCart = selectedCartIds.has(q.id);
             const isLocked = activeTestQuestionIds.has(q.id);
-            const sourceLabel = q.source || (q.aiVerification ? "Dual-AI" : "Teacher Custom");
+            const sourceLabel = getQuestionSource(q);
 
             const tagBadges = (q.tags || [])
                 .map((t) => {
@@ -597,29 +673,46 @@ bankListEl.addEventListener("click", async (e) => {
     }
 });
 
+// 方式 B：按所选标签 + System Bank / Teacher Custom / Dual-AI 三源配比一键随机混搭抽卷
 autopickBtn.addEventListener("click", () => {
-    const targetNum = Math.max(1, parseInt(autopickCountEl.value, 10) || 10);
-    const available = filteredApprovedCache.filter((q) => !selectedCartIds.has(q.id));
+    const reqSys = Math.max(0, parseInt(autopickSysEl.value, 10) || 0);
+    const reqCustom = Math.max(0, parseInt(autopickCustomEl.value, 10) || 0);
+    const reqAi = Math.max(0, parseInt(autopickAiEl.value, 10) || 0);
 
-    if (available.length === 0) {
-        alert("⚠️ No more unselected questions in the current filter view.");
+    if (reqSys + reqCustom + reqAi === 0) {
+        alert("⚠️ Please enter at least 1 question for System, Custom, or Dual-AI.");
         return;
     }
 
-    const pool = [...available];
-    for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [pool[i], pool[j]] = [pool[j], pool[i]];
+    const unselected = getAutoPickPool();
+    const sysPool = shuffleArray(unselected.filter((q) => getQuestionSource(q) === "System Bank"));
+    const customPool = shuffleArray(unselected.filter((q) => getQuestionSource(q) === "Teacher Custom"));
+    const aiPool = shuffleArray(unselected.filter((q) => getQuestionSource(q) === "Dual-AI"));
+
+    const pickedSys = sysPool.slice(0, reqSys);
+    const pickedCustom = customPool.slice(0, reqCustom);
+    const pickedAi = aiPool.slice(0, reqAi);
+
+    const totalPicked = [...pickedSys, ...pickedCustom, ...pickedAi];
+    if (totalPicked.length === 0) {
+        const tagHint = selectedAutoPickTags.size > 0
+            ? `\nSelected tags: ${Array.from(selectedAutoPickTags).join(", ")}`
+            : "";
+        alert(`⚠️ No unselected matching questions found for ${filterSubjectEl.value}.${tagHint}`);
+        return;
     }
 
-    const picked = pool.slice(0, Math.min(targetNum, pool.length));
-    picked.forEach((q) => selectedCartIds.add(q.id));
-
+    totalPicked.forEach((q) => selectedCartIds.add(q.id));
     applyBankFilter();
     renderCart();
 
-    if (picked.length < targetNum) {
-        alert(`🎲 Added all ${picked.length} available matching questions (requested ${targetNum}).`);
+    const shortfalls = [];
+    if (pickedSys.length < reqSys) shortfalls.push(`System Bank: ${pickedSys.length}/${reqSys}`);
+    if (pickedCustom.length < reqCustom) shortfalls.push(`Teacher Custom: ${pickedCustom.length}/${reqCustom}`);
+    if (pickedAi.length < reqAi) shortfalls.push(`Dual-AI: ${pickedAi.length}/${reqAi}`);
+
+    if (shortfalls.length > 0) {
+        alert(`🎲 Added ${totalPicked.length} questions to Test Paper.\nPartial match due to available pool:\n• ${shortfalls.join("\n• ")}`);
     }
 });
 
@@ -635,21 +728,34 @@ function renderCart() {
     clearCartBtn.style.display = chosen.length > 0 ? "inline-block" : "none";
 
     if (chosen.length === 0) {
-        cartListEl.innerHTML = '<div class="empty-bank" style="padding:18px;">Click "+ Add to Test" or use Quick Auto-Pick above.</div>';
+        cartMixSummaryEl.style.display = "none";
+        cartListEl.innerHTML = '<div class="empty-bank" style="padding:18px;">Click "+ Add to Test", use Hybrid Auto-Pick above, or send questions from Dual-AI Generator.</div>';
         return;
     }
 
+    let cSys = 0, cCustom = 0, cAi = 0;
+    chosen.forEach((q) => {
+        const src = getQuestionSource(q);
+        if (src === "System Bank") cSys++;
+        else if (src === "Dual-AI") cAi++;
+        else cCustom++;
+    });
+    cartMixSummaryEl.style.display = "block";
+    cartMixSummaryEl.textContent = `📊 Paper Mix: 🏛️ ${cSys} System Bank  •  👩‍🏫 ${cCustom} Custom  •  🤖 ${cAi} Dual-AI`;
+
     cartListEl.innerHTML = chosen
-        .map(
-            (q, idx) => `
-            <div class="cart-item">
-                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                    <strong>Q${idx + 1}.</strong> ${escapeHtml(q.questionText)}
+        .map((q, idx) => {
+            const src = getQuestionSource(q);
+            const shortTag = src === "System Bank" ? "🏛️" : src === "Dual-AI" ? "🤖" : "👩‍🏫";
+            return `
+                <div class="cart-item">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <span>${shortTag}</span> <strong>Q${idx + 1}.</strong> ${escapeHtml(q.questionText)}
+                    </div>
+                    <button class="btn-sm btn-danger" data-remove-cart="${q.id}">✕</button>
                 </div>
-                <button class="btn-sm btn-danger" data-remove-cart="${q.id}">✕</button>
-            </div>
-        `
-        )
+            `;
+        })
         .join("");
 }
 
@@ -747,7 +853,7 @@ publishedTestsListEl.addEventListener("click", async (e) => {
     }
 });
 
-// ================= 4. 批量导入题库 (CSV / JSON) =================
+// ================= 4. 批量导入题库 (CSV / JSON) & 一键去重 =================
 openImportBtn.addEventListener("click", () => {
     importFileInput.value = "";
     importJsonPaste.value = "";
@@ -946,6 +1052,58 @@ startImportBtn.addEventListener("click", async () => {
     }
 });
 
+// 一键扫描并删除题库中的重复题目（按 科目 + 题干 判重，保留最早入库或已在活跃考卷中的那一份）
+dedupeBankBtn.addEventListener("click", async () => {
+    const activeProtected = getProtectedQuestionIdSet();
+    const seen = new Map();
+    const duplicatesToDelete = [];
+
+    const sorted = [...allQuestionsCache].sort(
+        (a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
+    );
+
+    sorted.forEach((q) => {
+        const key = `${q.subject}::${(q.questionText || "").trim().toLowerCase()}`;
+        if (!seen.has(key)) {
+            seen.set(key, q);
+        } else {
+            const existing = seen.get(key);
+            if (activeProtected.has(q.id) && !activeProtected.has(existing.id)) {
+                duplicatesToDelete.push(existing);
+                seen.set(key, q);
+            } else {
+                duplicatesToDelete.push(q);
+            }
+        }
+    });
+
+    if (duplicatesToDelete.length === 0) {
+        alert("✅ No duplicate questions found in your Cloud Question Bank!");
+        return;
+    }
+
+    if (!confirm(`Found ${duplicatesToDelete.length} duplicate question(s) in Firestore.\nDelete all duplicates and keep 1 clean copy of each?`)) {
+        return;
+    }
+
+    dedupeBankBtn.disabled = true;
+    dedupeBankBtn.textContent = `⏳ Cleaning ${duplicatesToDelete.length}...`;
+
+    try {
+        for (const dup of duplicatesToDelete) {
+            selectedCartIds.delete(dup.id);
+            await DB.deleteQuestion(dup.id);
+        }
+        await refreshCloudData();
+        alert(`🧹 Successfully removed ${duplicatesToDelete.length} duplicate question(s)!`);
+    } catch (err) {
+        alert("❌ Cleanup failed: " + err.message);
+    } finally {
+        dedupeBankBtn.disabled = false;
+        dedupeBankBtn.textContent = "🧹 Remove Duplicates";
+    }
+});
+
 seedSampleBtn.addEventListener("click", async () => {
     if (!confirm("Add 8 verified Standard 6 KSSR sample questions (Math & Science) to your Cloud Question Bank?")) return;
     seedSampleBtn.disabled = true;
@@ -1045,7 +1203,7 @@ seedSampleBtn.addEventListener("click", async () => {
     }
 });
 
-// ================= 5. 视图 2：双 AI 多标签生成 + 审核 + 在线修改 + FIFO 自动清理 =================
+// ================= 5. 视图 2：双 AI 多标签生成 + 审核 + 在线修改 + 混合入篮 + FIFO 自动清理 =================
 function renderAiGenTagChips(preselectTags = null) {
     const subject = aiSubjectEl.value;
     const tags = KSSR_TAGS[subject] || [];
@@ -1318,6 +1476,61 @@ reviewListEl.addEventListener("click", async (e) => {
     }
 });
 
+// 方式 A：审核通过勾选的 AI 题 + 直接塞进右侧“当前组卷篮”，方便与 System Bank / Custom 混搭发同一个 PIN
+approveAddCartBtn.addEventListener("click", async () => {
+    const pendingChosen = allQuestionsCache.filter(
+        (q) => q.status === "pending" && selectedAiReviewIds.has(q.id)
+    );
+    if (pendingChosen.length === 0) {
+        alert("⚠️ Please check at least 1 AI question to approve & add to your Test Paper.");
+        return;
+    }
+
+    approveAddCartBtn.disabled = true;
+    approveAddCartBtn.textContent = "Approving & Adding...";
+
+    try {
+        const newlyApprovedIds = [];
+        for (const q of pendingChosen) {
+            await DB.updateQuestionStatus(q.id, "approved");
+            selectedCartIds.add(q.id);
+            newlyApprovedIds.push(q.id);
+            selectedAiReviewIds.delete(q.id);
+            uncheckedAiReviewIds.delete(q.id);
+        }
+
+        const affectedTags = extractKssrTopicTags(pendingChosen);
+        const fifoResult = await DB.enforceTagQuota(
+            affectedTags,
+            tagQuotaLimit,
+            getProtectedQuestionIdSet([...newlyApprovedIds, ...selectedCartIds])
+        );
+
+        if (!testTitleInput.value.trim() && aiTestTitleEl.value.trim()) {
+            testTitleInput.value = aiTestTitleEl.value.trim();
+        }
+        aiTestTitleEl.value = "";
+
+        await refreshCloudData();
+        switchActiveView("view-bank");
+
+        let msg = `✅ ${pendingChosen.length} Dual-AI question(s) approved and added to your Selected Test Paper!\nYou can now mix in System Bank or Teacher Custom questions and generate 1 unified PIN.`;
+        if (fifoResult.evictedCount > 0) {
+            const summary = fifoResult.details
+                .map((d) => `• ${d.tag}: auto-removed ${d.removed} oldest Dual-AI Q(s) (Limit: ${d.limit})`)
+                .join("\n");
+            msg += `\n\n♻️ Protected FIFO Quota Triggered:\n${summary}`;
+        }
+        alert(msg);
+    } catch (err) {
+        alert("❌ Failed: " + err.message);
+    } finally {
+        approveAddCartBtn.disabled = false;
+        approveAddCartBtn.textContent = "➕ Approve & Add to Test Paper";
+    }
+});
+
+// 独立发布：审核通过并立刻生成 PIN
 approveAndPublishBtn.addEventListener("click", async () => {
     const pendingChosen = allQuestionsCache.filter(
         (q) => q.status === "pending" && selectedAiReviewIds.has(q.id)
@@ -1362,10 +1575,11 @@ approveAndPublishBtn.addEventListener("click", async () => {
     } catch (err) {
         alert("Failed: " + err.message);
         approveAndPublishBtn.disabled = false;
-        approveAndPublishBtn.textContent = "🎯 Approve Selected & Generate PIN";
+        approveAndPublishBtn.textContent = "🎯 Approve & Generate PIN Now";
     }
 });
 
+// 仅审核入库
 approveOnlyBtn.addEventListener("click", async () => {
     const pendingChosen = allQuestionsCache.filter(
         (q) => q.status === "pending" && selectedAiReviewIds.has(q.id)
@@ -1583,7 +1797,6 @@ function renderClassAnalytics() {
     kpiAvgScoreEl.textContent = `${avgPct}%`;
     kpiAvgPbdEl.textContent = `Class Avg Ref: ${avgRef.tp} (${avgRef.label})`;
 
-    // 汇总全班每个 KSSR 标签的平均掌握率
     const subjectTags = KSSR_TAGS[subject] || [];
     const tagAgg = {};
     subjectTags.forEach((t) => {
@@ -1608,7 +1821,6 @@ function renderClassAnalytics() {
             pct: Math.round((s.correct / s.total) * 100)
         }));
 
-    // 缓存当前全班各标签平均分，供点击学生时叠加到个人雷达图上
     currentClassAvgByTag = {};
     testedStats.forEach((item) => {
         currentClassAvgByTag[item.tag] = item.pct;
@@ -1624,7 +1836,6 @@ function renderClassAnalytics() {
         kpiStrongestTagEl.textContent = strongest.tag;
         kpiStrongestPctEl.textContent = `${strongest.pct}% accuracy (${strongest.correct}/${strongest.total})`;
 
-        // 根据切换模式决定雷达图展示“最弱 5 项”还是“全部已考标签”
         let chartStats = testedStats;
         if (radarViewMode === "weakest5" && testedStats.length > 5) {
             chartStats = sortedAsc.slice(0, 5);
@@ -1685,7 +1896,6 @@ function renderClassAnalytics() {
             }
         });
 
-        // 右侧始终完整列出全部已考标签（从最弱排到最强，无 AI Remedial 按钮）
         tagMasteryListEl.innerHTML = sortedAsc
             .map((item) => {
                 const isWeak = item.pct < 65;
@@ -1705,7 +1915,6 @@ function renderClassAnalytics() {
             .join("");
     }
 
-    // 底部：学生提交明细表（点击任意行或按钮弹出个人诊断与 PBD 评定窗）
     studentResultsTbodyEl.innerHTML = filtered
         .map((r) => {
             const pct = Math.round(Number(r.percentage) || 0);
@@ -1754,7 +1963,6 @@ function renderClassAnalytics() {
         .join("");
 }
 
-// 点击学生表格行或按钮打开个人诊断与 PBD 评定弹窗
 studentResultsTbodyEl.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-inspect-id]");
     const row = e.target.closest("tr[data-result-id]");
@@ -1776,12 +1984,10 @@ function openStudentEvalModal(resultId) {
     evalScoreBadgeEl.textContent = `${rec.score ?? 0}/${rec.totalQuestions ?? 0} (${pct}%)`;
     evalRefPbdEl.textContent = `System Reference: ${refPbd.tp} (${refPbd.label})`;
 
-    // 预选老师此前已评过的 TP，若尚未评定则默认高亮参考 TP 方便老师微调
     selectedEvalTp = rec.teacherPbd || refPbd.tp;
     updateTpButtonSelection();
     evalTeacherRemarkEl.value = rec.teacherRemark || "";
 
-    // 提取该学生本次考过的所有 KSSR 标签成绩（按从弱到强排列）
     const tagEntries = Object.entries(rec.tagScores || {})
         .filter(([, stat]) => (Number(stat.total) || 0) > 0)
         .map(([tag, stat]) => {
@@ -1814,7 +2020,6 @@ function openStudentEvalModal(resultId) {
               .join("")
         : '<div class="empty-bank" style="padding:14px;">No per-tag breakdown recorded.</div>';
 
-    // 先显示弹窗，再渲染 Chart.js 个人雷达图以确保画布尺寸正确
     studentEvalModal.classList.add("show");
 
     const labels = tagEntries.map((x) => (x.tag.length > 18 ? x.tag.slice(0, 16) + "…" : x.tag));
@@ -1892,7 +2097,6 @@ closeEvalModalBtn.addEventListener("click", () => {
     activeEvalResultId = null;
 });
 
-// 保存老师手动评定的 PBD 等级与评语到 Firestore
 savePbdGradeBtn.addEventListener("click", async () => {
     if (!activeEvalResultId || !selectedEvalTp) {
         alert("⚠️ Please select a PBD band (TP 1 – TP 6) first.");
@@ -1922,7 +2126,6 @@ savePbdGradeBtn.addEventListener("click", async () => {
     }
 });
 
-// 一键加载包含全部 8 个标签的 Demo 班级成绩（方便测试 Weakest 5 / All 切换与个人评分）
 seedDemoResultsBtn.addEventListener("click", async () => {
     if (!confirm("Add 7 realistic Standard 6 demo student results (covering all 8 Math & 8 Science tags) to Firestore?")) return;
     seedDemoResultsBtn.disabled = true;

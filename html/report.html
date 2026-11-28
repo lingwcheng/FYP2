@@ -3,158 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnostic Report - EduSphere</title>
+    <title>Diagnostic Report & AI Remedial - EduSphere</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background: linear-gradient(135deg, #f8faff 0%, #f1eaff 100%); min-height: 100vh; display: flex; overflow-x: hidden; color: #1e293b; }
-        .sidebar { width: 260px; min-height: 100vh; padding: 30px 20px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; z-index: 10; }
-        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; padding-left: 10px; color:#1e1b4b; cursor: pointer; }
-        .nav-menu { display: flex; flex-direction: column; gap: 5px; flex-grow: 1; }
-        .nav-item { padding: 12px 15px; border-radius: 12px; text-decoration: none; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 15px; transition: all 0.3s; cursor: pointer;}
-        .nav-item:hover, .nav-item.active { background: #fff; color: #4318FF; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .user-profile { margin-top: auto; padding: 15px; background: rgba(255,255,255,0.8); border-radius: 15px; display: flex; align-items: center; gap: 15px; }
-        .avatar { width: 40px; height: 40px; background: #fed7aa; border-radius: 50%; font-size:24px; text-align:center; line-height:40px;}
-        
-        .main-content { flex-grow: 1; padding: 40px; display: flex; flex-direction: column; gap: 20px; }
-        .report-header { margin-bottom: 10px; }
-        .report-header h1 { font-size: 2rem; color: #1e1b4b; font-weight: 700; }
-        .report-header p { color: #64748b; font-size: 0.95rem; }
+        body { background: linear-gradient(135deg, #e4edff 0%, #f1eaff 50%, #e0f7f2 100%); min-height: 100vh; display: flex; overflow-x: hidden; color: #1e293b; }
 
-        .top-row { display: flex; gap: 20px; align-items: stretch; }
-        .card { background: #ffffff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
-        
-        .profile-card { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .accuracy-circle { width: 140px; height: 140px; border-radius: 50%; border: 10px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 700; color: #1e1b4b; margin: 25px 0 15px 0; transition: border-color 0.5s; }
-        
-        .chart-card { flex-grow: 1; display: flex; flex-direction: column; }
-        .chart-container { flex-grow: 1; position: relative; min-height: 300px; display: flex; justify-content: center; align-items: center; }
-        
-        .side-stats { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 15px; }
-        .tag-pill { background: #ffffff; padding: 12px 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); font-weight: 600; color: #1e1b4b; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
-        .stat-mini-card { background: #ffffff; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 15px; }
-        .stat-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; }
-        
-        .intervention-card { display: flex; justify-content: space-between; align-items: center; padding: 25px 35px; background: #ffffff; border: 1px solid #fffbeb; }
-        .review-btn { background: #f59e0b; color: white; border: none; padding: 12px 30px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 15px rgba(245, 158, 11, 0.2); }
-        .review-btn:hover { background: #d97706; transform: translateY(-2px); }
+        /* 侧边栏（与 student.html 统一） */
+        .sidebar { width: 265px; min-height: 100vh; padding: 28px 18px; background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 34px; padding-left: 10px; color: #1e1b4b; cursor: pointer; }
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+        .nav-item { padding: 12px 15px; border-radius: 12px; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 10px; transition: all 0.25s; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+        .nav-item:hover, .nav-item.active { background: #fff; color: #4318FF; box-shadow: 0 5px 15px rgba(67, 24, 255, 0.08); font-weight: 600; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 100; display: none; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 400px; border-radius: 25px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); max-height: 80vh; overflow-y: auto;}
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .close-btn { font-size: 1.5rem; cursor: pointer; color: #64748b; }
-        .lang-option { padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500;}
-        .lang-option:hover { border-color: #4318FF; }
-        .lang-option.active { background: #f0faff; border-color: #4318FF; color: #4318FF; }
-        
-        .review-item { margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 15px; background: #f8fafc; }
-        .review-q { font-weight: 600; color: #1e293b; margin-bottom: 10px; font-size: 0.95rem; }
-        .review-ans { font-size: 0.9rem; color: #64748b; margin-bottom: 5px; }
+        .user-profile { margin-top: auto; padding: 14px; background: rgba(255,255,255,0.78); border-radius: 15px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .avatar { width: 40px; height: 40px; background: #fed7aa; border-radius: 50%; font-size: 22px; text-align: center; line-height: 40px; flex-shrink: 0; }
+        .logout-btn { width: 100%; padding: 10px; border: 1px solid #fecdd3; background: #fff1f2; color: #e11d48; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .logout-btn:hover { background: #ffe4e6; }
+
+        /* 主内容区 */
+        .main-content { flex-grow: 1; padding: 32px 38px; height: 100vh; overflow-y: auto; }
+        .top-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+        .top-header h1 { font-size: 1.9rem; color: #1e1b4b; font-weight: 700; }
+        .top-header p { color: #64748b; font-size: 0.9rem; margin-top: 3px; }
+        .btn-back { background: white; color: #4318FF; border: 1px solid #c7d2fe; padding: 10px 18px; border-radius: 12px; font-weight: 600; font-size: 0.86rem; cursor: pointer; transition: 0.2s; }
+        .btn-back:hover { background: #eef2ff; }
+
+        /* 上半区 3 列诊断概览 */
+        .overview-grid { display: grid; grid-template-columns: 260px 1fr 290px; gap: 20px; margin-bottom: 24px; align-items: stretch; }
+        .card { background: rgba(255, 255, 255, 0.86); backdrop-filter: blur(20px); border: 1px solid white; border-radius: 22px; padding: 24px; box-shadow: 0 12px 30px rgba(31, 38, 135, 0.05); }
+
+        /* 左卡：个人准确率圆环 */
+        .profile-score-card { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .big-avatar { width: 62px; height: 62px; border-radius: 50%; background: #fed7aa; font-size: 2rem; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
+        .std-badge { background: #e0e7ff; color: #4318FF; padding: 3px 12px; border-radius: 99px; font-size: 0.74rem; font-weight: 700; }
+        .ring-wrap { position: relative; width: 132px; height: 132px; margin: 8px 0; }
+        .ring-wrap svg { width: 132px; height: 132px; transform: rotate(-90deg); }
+        .ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 11; }
+        .ring-fg { fill: none; stroke: #4318FF; stroke-width: 11; stroke-linecap: round; transition: stroke-dashoffset 0.7s ease; }
+        .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .ring-pct { font-size: 1.75rem; font-weight: 700; color: #1e1b4b; line-height: 1.1; }
+        .ring-sub { font-size: 0.75rem; color: #64748b; }
+
+        /* 中卡：雷达图 */
+        .chart-card { display: flex; flex-direction: column; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .chart-box { position: relative; flex-grow: 1; min-height: 290px; }
+
+        /* 右列：科目、老师 PBD、强弱项、错题数 */
+        .side-stats { display: flex; flex-direction: column; gap: 12px; }
+        .mini-card { background: rgba(255, 255, 255, 0.9); border: 1px solid white; border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
+        .mini-label { font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .mini-val { font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-top: 3px; }
+        .pbd-banner { background: #f0fdf4; border: 1.5px solid #86efac; }
+        .pbd-banner.pending { background: #fffbeb; border: 1.5px solid #fde68a; }
+        .remark-text { font-size: 0.78rem; color: #166534; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #bbf7d0; line-height: 1.45; }
+
+        /* 下半区：逐题复盘与 AI Remedial */
+        .review-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .filter-pills { display: flex; gap: 8px; }
+        .filter-pill { padding: 7px 14px; border-radius: 10px; border: 1px solid #cbd5e1; background: white; color: #475569; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.18s; }
+        .filter-pill.active { background: #4318FF; color: white; border-color: #4318FF; }
+
+        .review-list { display: flex; flex-direction: column; gap: 16px; }
+        .review-item { background: white; border-radius: 18px; padding: 20px 22px; border-left: 5px solid #cbd5e1; box-shadow: 0 6px 18px rgba(0,0,0,0.03); }
+        .review-item.correct { border-left-color: #16a34a; }
+        .review-item.wrong { border-left-color: #ef4444; }
+
+        .item-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.73rem; font-weight: 700; }
+        .pill-tag { background: #e0e7ff; color: #4318FF; }
+        .pill-ok { background: #dcfce7; color: #166534; }
+        .pill-err { background: #fee2e2; color: #b91c1c; }
+
+        .q-stem { font-size: 1rem; font-weight: 600; color: #1e1b4b; margin-bottom: 12px; line-height: 1.5; }
+        .ans-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; font-size: 0.86rem; }
+        .ans-box { padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; }
+        .ans-box.student-wrong { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .ans-box.student-right { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+        .ans-box.correct-ref { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+
+        .base-exp { font-size: 0.83rem; color: #475569; background: #f8fafc; padding: 9px 13px; border-radius: 10px; margin-bottom: 12px; }
+
+        /* AI Remedial 按钮与诊断展开区 */
+        .ai-remedial-btn { background: linear-gradient(135deg, #7c3aed 0%, #4318FF 100%); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 16px rgba(124, 58, 237, 0.25); transition: all 0.2s; }
+        .ai-remedial-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(124, 58, 237, 0.35); }
+        .ai-remedial-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+        .remedial-panel { display: none; margin-top: 14px; background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%); border: 1.5px solid #c4b5fd; border-radius: 16px; padding: 18px 20px; }
+        .remedial-panel.show { display: block; }
+        .rem-title { font-size: 0.86rem; font-weight: 700; color: #5b21b6; margin-bottom: 5px; }
+        .rem-text { font-size: 0.86rem; color: #1e293b; line-height: 1.55; margin-bottom: 12px; }
+        .rem-steps { padding-left: 20px; font-size: 0.85rem; color: #1e293b; line-height: 1.6; margin-bottom: 12px; }
+        .rem-tip { background: white; border: 1px dashed #a78bfa; border-radius: 10px; padding: 9px 13px; font-size: 0.83rem; color: #4c1d95; font-weight: 600; }
+
+        .empty-state { text-align: center; color: #94a3b8; padding: 36px 16px; font-style: italic; }
+
+        @media (max-width: 1100px) {
+            .overview-grid { grid-template-columns: 1fr; }
+            .ans-compare { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+    <!-- 左侧导航栏 -->
     <div class="sidebar">
         <div class="logo" onclick="window.location.href='index.html'">🛡️ EduSphere</div>
         <div class="nav-menu">
-            <a onclick="showWIP('Profile')" class="nav-item">👤 <span id="nav-prof">My Profile</span></a>
-            <a href="student.html" class="nav-item">📝 <span id="nav-prac">Custom Practice</span></a>
-            <a href="#" class="nav-item active">📊 <span id="nav-res">Reports</span></a>
-            <a onclick="openSettings()" class="nav-item">⚙️ <span id="nav-set">Settings</span></a>
+            <a href="student.html" class="nav-item">🔑 Join Teacher Exam</a>
+            <a href="student.html?tab=practice" class="nav-item">📝 Self-Practice Quiz</a>
+            <a href="student.html?tab=results" class="nav-item active">📊 My Results & PBD</a>
         </div>
+
         <div class="user-profile">
-            <div class="avatar">🧑‍💻</div>
-            <div><div style="font-weight:600; font-size:0.85rem;">Ali bin Ahmad</div><div style="font-size:0.75rem; color:#64748b;">Standard 6</div></div>
+            <div class="avatar">🧑‍🎓</div>
+            <div style="min-width:0;">
+                <div id="sidebar-student-name" style="font-weight:600; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Loading...</div>
+                <div style="font-size:0.75rem; color:#64748b;">Standard 6 (KSSR)</div>
+            </div>
         </div>
+        <button id="logout-btn" class="logout-btn">🚪 Sign Out</button>
     </div>
 
+    <!-- 主内容区 -->
     <div class="main-content">
-        <div class="report-header">
-            <h1 id="rep-title">Diagnostic Report</h1>
-            <p id="rep-sub">Comprehensive overview of your academic performance</p>
+        <div class="top-header">
+            <div>
+                <h1 id="report-title">Diagnostic Report</h1>
+                <p id="report-subtitle">Loading your assessment record from Cloud Firestore...</p>
+            </div>
+            <button type="button" class="btn-back" onclick="window.location.href='student.html?tab=results'">
+                ← Back to My Results
+            </button>
         </div>
-        
-        <div class="top-row">
-            <div class="card profile-card">
-                <img src="https://api.dicebear.com/7.x/micah/svg?seed=Ali" alt="Avatar" style="width:80px; margin-bottom:15px;">
-                <h3 style="font-size: 1.1rem; color: #1e1b4b;">Ali bin Ahmad</h3>
-                <span id="display-standard" style="background:#e0e7ff; color:#4318FF; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:600; margin-top:5px;">Standard 6</span>
-                
-                <div class="accuracy-circle" id="accuracy-circle-ui">
-                    <span id="dynamic-accuracy">0%</span>
-                    <span style="font-size: 0.9rem; color: #64748b; font-weight: 500;" id="rep-acc">Accuracy</span>
+
+        <!-- 上半区：个人准确率 + KSSR 雷达图 + 老师 PBD 卡片 -->
+        <div class="overview-grid">
+            <!-- 左卡 -->
+            <div class="card profile-score-card">
+                <div class="big-avatar">🧑‍🎓</div>
+                <div id="card-student-name" style="font-weight:700; font-size:1.05rem; color:#1e1b4b;">Student</div>
+                <span class="std-badge">Standard 6</span>
+
+                <div class="ring-wrap">
+                    <svg viewBox="0 0 132 132">
+                        <circle class="ring-bg" cx="66" cy="66" r="56"></circle>
+                        <circle class="ring-fg" id="accuracy-ring" cx="66" cy="66" r="56" stroke-dasharray="351.86" stroke-dashoffset="351.86"></circle>
+                    </svg>
+                    <div class="ring-center">
+                        <div class="ring-pct" id="accuracy-pct">0%</div>
+                        <div class="ring-sub" id="score-fraction">0 / 0</div>
+                    </div>
                 </div>
-                <p style="font-size:0.8rem; color:#94a3b8;" id="rep-based">Based on latest Quiz</p>
+                <div style="font-size:0.76rem; color:#64748b;" id="submitted-time-text">Submitted just now</div>
             </div>
 
+            <!-- 中卡：KSSR 标签掌握图 -->
             <div class="card chart-card">
-                <!-- 🌟 这里改成了通用的 rep-chart-title 🌟 -->
-                <h3 id="rep-chart-title" style="color: #1e1b4b; font-size: 1.1rem;">Skill Analysis</h3>
-                <div class="chart-container">
-                    <canvas id="kpsChart"></canvas>
+                <div class="chart-header">
+                    <strong style="font-size:1.05rem; color:#1e1b4b;" id="chart-title">KSSR Competency Radar</strong>
+                    <span style="font-size:0.76rem; color:#64748b;" id="chart-subtitle">Accuracy (%) by KSSR Tag</span>
+                </div>
+                <div class="chart-box">
+                    <canvas id="report-chart"></canvas>
                 </div>
             </div>
 
+            <!-- 右列：PBD 等级、科目、强弱项、错题数 -->
             <div class="side-stats">
-                <div class="tag-pill">
-                    <span style="color: #3b82f6; font-size: 1.2rem;" id="subject-icon">📘</span> <span id="display-subject">Science</span>
+                <div class="mini-card pbd-banner pending" id="pbd-card">
+                    <div class="mini-label">Official Teacher PBD Grade</div>
+                    <div class="mini-val" id="pbd-grade-val">⏳ Pending Teacher Review</div>
+                    <div class="remark-text" id="pbd-remark-box" style="display:none;"></div>
                 </div>
-                
-                <div class="stat-mini-card">
-                    <div class="stat-icon" style="background: #f0fdf4; color: #22c55e;">📈</div>
-                    <div>
-                        <div style="font-size: 0.8rem; color: #64748b;">Strongest Chapter</div>
-                        <div style="font-weight: 600; color: #1e1b4b; font-size: 0.95rem;" id="dynamic-strongest">N/A</div>
+
+                <div class="mini-card">
+                    <div class="mini-label">Subject & PIN</div>
+                    <div class="mini-val" id="stat-subject">--</div>
+                </div>
+
+                <div class="mini-card">
+                    <div class="mini-label">Strongest / Weakest Tag</div>
+                    <div style="font-size:0.84rem; margin-top:4px;">
+                        <div style="color:#15803d; font-weight:600;">▲ <span id="stat-strongest">N/A</span></div>
+                        <div style="color:#dc2626; font-weight:600; margin-top:2px;">▼ <span id="stat-weakest">N/A</span></div>
                     </div>
                 </div>
 
-                <div class="stat-mini-card">
-                    <div class="stat-icon" style="background: #fef2f2; color: #ef4444;">📉</div>
-                    <div>
-                        <div style="font-size: 0.8rem; color: #64748b;">Mistakes Made</div>
-                        <div style="font-weight: 600; color: #1e1b4b; font-size: 0.95rem;" id="dynamic-mistakes">0 Mistakes</div>
-                    </div>
+                <div class="mini-card">
+                    <div class="mini-label">Mistakes Made</div>
+                    <div class="mini-val" id="stat-mistakes" style="color:#dc2626;">0 Mistakes</div>
+                    <div id="stat-tab-alerts" style="font-size:0.74rem; color:#b45309; margin-top:2px; display:none;"></div>
                 </div>
             </div>
         </div>
 
-        <div class="card intervention-card">
-            <div style="display: flex; gap: 20px; align-items: center;">
-                <div style="font-size: 2rem; background: #fef3c7; width: 55px; height: 55px; border-radius: 50%; display: flex; justify-content: center; align-items: center;">💡</div>
+        <!-- 下半区：逐题复盘与 AI Misconception Remedial -->
+        <div class="card">
+            <div class="review-header">
                 <div>
-                    <h3 id="rep-interv" style="color: #1e1b4b; font-size: 1.1rem;">Targeted Intervention</h3>
-                    <p id="rep-interv-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 3px;">Review your mistakes to understand your weak points.</p>
+                    <h2 style="font-size:1.25rem; color:#1e1b4b;">🧐 Question Review & AI Misconception Remedial</h2>
+                    <p style="font-size:0.84rem; color:#64748b;">Click <strong>"🤖 AI Remedial"</strong> on any wrong question to discover why you chose that wrong option and how to fix it.</p>
+                </div>
+                <div class="filter-pills">
+                    <button type="button" class="filter-pill active" id="filter-mistakes-btn">Mistakes Only</button>
+                    <button type="button" class="filter-pill" id="filter-all-btn">All Questions</button>
                 </div>
             </div>
-            <button class="review-btn" id="rep-btn-rev" onclick="openReviewModal()">Review Mistakes</button>
-        </div>
-    </div>
 
-    <!-- 语言弹窗 -->
-    <div class="modal-overlay" id="settings-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Settings</h2>
-                <span class="close-btn" onclick="closeSettings()">✕</span>
+            <div class="review-list" id="review-list">
+                <div class="empty-state">Loading your answers...</div>
             </div>
-            <p style="font-size:0.9rem; color:#64748b; margin-bottom: 15px;" id="modal-desc">Select Language / Pilih Bahasa</p>
-            <div class="lang-option active" id="lang-en" onclick="setLanguage('en')">🇬🇧 English (Default)</div>
-            <div class="lang-option" id="lang-ms" onclick="setLanguage('ms')">🇲🇾 Bahasa Melayu</div>
         </div>
     </div>
 
-    <!-- 错题本弹窗 -->
-    <div class="modal-overlay" id="review-modal">
-        <div class="modal-content" style="width: 500px;">
-            <div class="modal-header">
-                <h2 style="color:#1e1b4b;">Review Mistakes</h2>
-                <span class="close-btn" onclick="closeReviewModal()">✕</span>
-            </div>
-            <div id="review-list"></div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="../js/settings.js"></script>
-    <script src="../js/report.js"></script>
+    <script type="module" src="../js/report.js"></script>
 </body>
 </html>
